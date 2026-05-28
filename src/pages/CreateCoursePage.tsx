@@ -124,12 +124,8 @@ function getStepState(index: number, activeStepIndex: number, isSuccess: boolean
 }
 
 function getGenerationModeLabel(settings: AppSettings): string {
-  if (settings.generationMode === 'api') {
-    return 'Real AI with user API key';
-  }
-
   if (settings.generationMode === 'vercel_proxy') {
-    return 'Vercel proxy, coming soon';
+    return 'Vercel proxy';
   }
 
   return 'Mock';
@@ -156,7 +152,7 @@ function formatGenerationError(error: unknown): string {
     return error.message;
   }
 
-  return 'Generation failed. You can retry or switch to mock mode.';
+  return 'Generation failed. Please try again.';
 }
 
 export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
@@ -178,7 +174,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     trimmedSourceMaterial.length < MINIMUM_RECOMMENDED_CHARACTERS;
   const characterCount = sourceMaterial.length;
   const generationModeLabel = getGenerationModeLabel(settings);
-  const isRealAIMode = settings.generationMode === 'api';
 
   function resetMessages() {
     setError(null);
@@ -219,14 +214,13 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       });
     }
 
-    if (currentSettings.generationMode === 'api') {
+    if (currentSettings.generationMode === 'vercel_proxy') {
       const result = await generateCourseWithAI({
         sourceMaterial: trimmedSourceMaterial,
         optionalTitle: courseTitle,
         difficulty,
         courseStyle,
         lessonLength,
-        apiKey: currentSettings.apiKey,
         modelName: currentSettings.modelName
       });
 
@@ -241,7 +235,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       return result.course;
     }
 
-    throw new Error('Vercel proxy mode is coming in Phase 16. Switch to Mock or Real AI with user API key for now.');
+    throw new Error('Generation failed. Please try again.');
   }
 
   async function handleGenerateCourse() {
@@ -301,7 +295,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       <PageCard
         eyebrow="Create"
         title="Build a learning path"
-        description="Paste notes, a transcript, an article, or a study guide. AdoLearn can use the local mock generator or, if enabled in Settings, real AI with your browser-stored API key."
+        description="Paste notes, a transcript, an article, or a study guide. AdoLearn can use the local mock generator or, if enabled in Settings, real AI through the Vercel proxy."
       >
         <form
           className="space-y-6"
@@ -314,7 +308,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
             <div>
               <p className="text-sm font-black text-slate-950">Source readiness</p>
               <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
-                More detail usually creates better lessons. Short sources still work in mock mode.
+                More detail usually creates better lessons. Short sources still work, especially in mock mode.
               </p>
             </div>
             <div className="mt-3 min-w-48 sm:mt-0">
@@ -376,13 +370,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                   Change this in Settings.
                 </p>
               </div>
-
-              {isRealAIMode ? (
-                <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900 ring-1 ring-amber-100">
-                  Your API key is stored locally in this browser. Browser-only apps cannot fully protect API keys.
-                  For a public app, use the Vercel proxy mode that will be added later.
-                </div>
-              ) : null}
 
               <div className="grid gap-4">
                 <SelectField

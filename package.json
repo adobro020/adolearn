@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A browser-only learning app foundation built with React, TypeScript, Vite, and Tailwind CSS.",
+  "description": "A Vercel-ready learning app built with React, TypeScript, Vite, Tailwind CSS, and a serverless AI generation proxy.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -18,6 +18,7 @@
     "vite": "^8.0.0"
   },
   "devDependencies": {
+    "@types/node": "^25.9.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.9.0"

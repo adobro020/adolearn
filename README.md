@@ -1,8 +1,8 @@
 # AdoLearn
 
-AdoLearn is a browser-only learning app built with React, TypeScript, Vite, and Tailwind CSS.
+AdoLearn is a Vercel-ready learning app built with React, TypeScript, Vite, Tailwind CSS, and a Vercel API proxy for real AI course generation.
 
-Users can paste learning material, generate a Duolingo-style course with either mock mode or browser-only real AI mode, work through a course map, complete lesson exercises, review weak areas, and persist progress in the browser. Backend storage is intentionally not included yet.
+Users can paste learning material, generate a Duolingo-style course with either mock mode or Vercel proxy mode, work through a course map, complete lesson exercises, review weak areas, and persist courses/progress in the browser. AdoLearn does not include accounts, login, a database, or cloud course storage yet.
 
 ## What is included
 
@@ -10,30 +10,36 @@ Users can paste learning material, generate a Duolingo-style course with either 
 - Tailwind CSS through the Vite plugin
 - Mobile-first responsive UI with polished cards, progress indicators, motion, and accessible focus states
 - Dashboard with saved courses, XP, streaks, review items, and progress
-- Mock course creator
-- Browser-only real AI course generation with a user-provided API key
+- Mock course creator for local testing
+- Real AI course generation through `/api/generate-course`
+- Vercel serverless API proxy using `OPENAI_API_KEY`
 - Duolingo-style course map
 - Lesson player for all current exercise types
-- Browser-only Review Mode from missed questions, weak concepts, and completed lessons
-- Settings page for AI preferences, appearance preference, import/export, and data controls
+- Browser-local Review Mode from missed questions, weak concepts, and completed lessons
+- Settings page for model preference, generation mode, appearance, import/export, and data controls
 - UI polish for game feel: confetti on passed lessons, XP/streak animation, loading skeletons, improved empty states, and better feedback states
 - Local progress, XP, streaks, weak concepts, review attempts, and incorrect-answer tracking
-- Browser-only persistence through `localStorage`
+- Browser persistence through `localStorage`
 - AI prompt building, course validation, and normalization before generated courses are saved
-- Vercel-ready static frontend deployment configuration
+- Vercel SPA routing configuration
 
-## What is intentionally not included yet
+## What is intentionally not included
 
-- Vercel API routes or other backend services
-- Accounts or authentication
+- User accounts or authentication
 - Database storage
+- Cloud course storage
+- Payment system
+- User-managed API key mode
+- Browser-side OpenAI API calls
 - Hardcoded API keys
-- Environment variables for AI credentials
+- Committed `.env` or `.env.local` files
 
 ## Project structure
 
 ```txt
 AdoLearn/
+├── api/
+│   └── generate-course.ts
 ├── index.html
 ├── package.json
 ├── README.md
@@ -83,35 +89,24 @@ npm run preview
 
 Vite writes the production build to `dist`, which is the directory Vercel should serve.
 
-
-## UI polish and accessibility
-
-Phase 15 focuses on product feel without adding backend features. The app now includes lightweight motion, improved card hover states, progress bars/rings, lesson-completion celebration, confetti after passing, animated stat changes, loading skeletons, clearer empty/error/success states, better locked-lesson guidance, and larger mobile tap targets.
-
-Accessibility improvements include visible focus states, ARIA labels on important action buttons, progressbar semantics for progress indicators, keyboard-friendly controls, reduced-motion support, and feedback that uses text/icons instead of color alone.
-
 ## Local data storage
 
-AdoLearn stores user data locally in the browser using these `localStorage` keys:
+AdoLearn stores user-owned app data locally in the browser using these `localStorage` keys:
 
 - `adolearn_courses`
 - `adolearn_progress`
 - `adolearn_settings`
 
-Mock mode sends no course data, progress, review history, API keys, imports, exports, or settings to a server. Real AI mode sends the pasted source material and generation prompt directly from the browser to the AI API using the user-provided key; AdoLearn still stores saved courses and progress only in localStorage.
-
-> API key warning: browser-only apps cannot fully protect API keys. Your key is stored locally in this browser. For production, use a Vercel API route or another backend proxy. Vercel proxy mode is listed in Settings as a disabled future option and is planned for Phase 16.
+Courses, lesson progress, XP, streaks, weak concepts, review attempts, imports, and exports remain local to the browser. The Vercel API proxy is used only for generating a course from pasted source material; generated courses are still saved in browser `localStorage` after validation and normalization.
 
 ## Settings and data controls
 
-The Settings page currently supports:
+The Settings page supports:
 
 - Model name setting, defaulting to `gpt-5-nano`
-- Browser-local API key storage
 - Generation mode selection:
-  - Mock
-  - Real AI with user API key
-  - Vercel proxy, coming soon and disabled for now
+  - Mock mode
+  - Vercel proxy mode
 - Theme preference:
   - System
   - Light
@@ -127,25 +122,84 @@ The Settings page currently supports:
 
 Imports are validated before saving. Full-data imports replace the current local browser data after confirmation. Course imports are added to the local course list, and imported course IDs are regenerated when needed to avoid conflicts.
 
-## AI prompt and schema preparation
+Legacy settings from earlier phases are normalized automatically. Browser-stored direct API mode and stored key fields are removed when settings are read or reset.
 
-Phase 12 added the browser-only preparation layer for AI course generation. Phase 13 connects direct browser AI generation when the user selects Real AI mode and provides an API key.
+## AI prompt, schema, and validation layer
 
-Included services:
+AdoLearn uses reusable services for AI course generation:
 
 - `src/services/aiPromptService.ts` builds an instructional-design prompt for AI generation.
 - `src/services/schemaService.ts` describes the expected AdoLearn course JSON shape.
 - `src/services/courseValidator.ts` checks generated course JSON and returns useful errors and warnings.
 - `src/services/courseNormalizer.ts` repairs safe missing fields such as IDs, timestamps, hints, accepted answers, and estimated minutes.
-- `src/services/courseSchemaDebug.ts` provides a temporary developer helper for validating and normalizing mock AI JSON locally.
+- `src/services/aiCourseGenerationService.ts` calls the Vercel proxy from the frontend, then validates and normalizes the returned course.
+- `api/generate-course.ts` calls OpenAI from the serverless function using `OPENAI_API_KEY`.
 
 The prompt instructs AI generation to use only provided source material, avoid unsupported facts, return JSON only, and include sections, units, lessons, exercises, objectives, explanations, hints, review lessons, and final challenges.
 
-This layer is used by direct browser generation now and is designed to be reused by a safer Vercel API route/proxy in Phase 16.
+## Vercel API proxy mode
+
+Real AI generation uses the Vercel API route:
+
+```txt
+POST /api/generate-course
+```
+
+The frontend sends only:
+
+- `sourceMaterial`
+- `optionalTitle`
+- `difficulty`
+- `courseStyle`
+- `lessonLength`
+- `modelName`
+
+The frontend never sends API secrets, environment variable values, or secret tokens. The serverless function reads the OpenAI key from `process.env.OPENAI_API_KEY`.
+
+Supported model names:
+
+- `gpt-5-nano`
+- `gpt-5-mini`
+- `gpt-5`
+
+Unsupported model names fall back to `gpt-5-nano`.
+
+The API route includes:
+
+- POST-only method handling
+- Missing-source validation
+- Request body size limit
+- Source material character limit
+- Approved-model fallback
+- Friendly API errors
+- No stack traces in responses
+- No committed secrets
+- No logging of full source material
+- No API key returned to the frontend
+
+## Vercel environment variable setup
+
+To enable Vercel proxy mode:
+
+1. Go to the Vercel dashboard.
+2. Open the AdoLearn project.
+3. Go to **Project Settings**.
+4. Open **Environment Variables**.
+5. Add:
+   - Name: `OPENAI_API_KEY`
+   - Value: your OpenAI API key
+6. Apply it to Production, Preview, and Development if needed.
+7. Redeploy the project after adding the variable.
+8. Use Mock mode for testing without AI usage.
+9. Use Vercel proxy mode for real AI generation.
+
+Do not commit `.env` or `.env.local`. The `.gitignore` file excludes `.env`, `.env.local`, and `.vercel`.
+
+> Cost note: Vercel proxy mode uses the site owner’s OpenAI API key. Public users can create API usage costs. Use request size limits, usage monitoring, and rate limiting before promoting the app widely.
 
 ## Vercel deployment
 
-AdoLearn is configured for Vercel static deployment as a Vite single-page app.
+AdoLearn is configured for Vercel deployment as a Vite single-page app with an API route.
 
 ### Deploy from GitHub
 
@@ -157,9 +211,10 @@ AdoLearn is configured for Vercel static deployment as a Vite single-page app.
    - Install Command: `npm install`
    - Build Command: `npm run build`
    - Output Directory: `dist`
-5. Deploy.
+5. Add `OPENAI_API_KEY` in Vercel Environment Variables if you want Vercel proxy mode to work.
+6. Deploy or redeploy.
 
-The project includes `vercel.json` with a rewrite rule that sends non-API routes to `index.html`. This supports SPA refresh behavior for app routes or future React routes.
+The project includes `vercel.json` with a rewrite rule that sends non-API routes to `index.html`. This supports SPA refresh behavior while preserving `/api/*` routes.
 
 ```json
 {
@@ -188,18 +243,38 @@ Recommended setup:
 - The final app should load from `https://yourdomain.com/` or your chosen canonical domain.
 - Do not use `/adolearn/` unless you intentionally deploy under a subpath.
 
-## Browser-only AI generation
+## Troubleshooting
 
-AdoLearn can run in two generation modes today:
+### Missing `OPENAI_API_KEY`
 
-- Mock: uses local mock course generation and makes no network requests.
-- Real AI with user API key: calls the AI API directly from the browser using the locally stored API key and selected model name. The default model is `gpt-5-nano`.
+If Vercel proxy mode returns a server configuration error, confirm `OPENAI_API_KEY` exists in Vercel Project Settings → Environment Variables and redeploy after adding it.
 
-The real AI flow builds the AdoLearn prompt, requests JSON output, parses the response, validates the course schema, normalizes repairable fields, saves the final course to `localStorage`, initializes progress, and opens the Course Map.
+### Failed Vercel deployment
 
-No API keys should be committed to the repository. No environmentt variables are required for the current browser-only mode. Phase 16 is reserved for a safer Vercel API route/proxy option.
+Run locally first:
 
-> Security warning: browser-only apps cannot fully protect API keys. Your key is stored locally in this browser. For a public app, use a Vercel API route or another backend proxy.
+```bash
+npm install
+npm run build
+```
+
+Confirm Vercel is using Framework Preset `Vite`, Build Command `npm run build`, and Output Directory `dist`.
+
+### API route returning 500
+
+Check that `OPENAI_API_KEY` is available to the deployment environment you are testing. Confirm the route is deployed at `/api/generate-course` and that requests are `POST` requests.
+
+### Course JSON validation failure
+
+Try a shorter, clearer source paste or use Mock mode. AdoLearn validates and normalizes generated JSON before saving so malformed courses are rejected.
+
+### Source material too large
+
+Paste a shorter excerpt or split the material into multiple smaller courses. The API route has request size limits to protect cost and reliability.
+
+### OpenAI rate limits
+
+Wait and retry later, or use Mock mode while testing. Before wider public launch, add stronger rate limiting and monitoring.
 
 ## Pre-deployment test checklist
 
@@ -218,5 +293,10 @@ Before deploying or continuing development, test:
 - Export data
 - Import data
 - Use mock generation
-- Use real AI generation if an API key is configured
+- Use Vercel proxy mode with `OPENAI_API_KEY` configured
+- Confirm `/api/generate-course` rejects non-POST requests
+- Confirm oversized source material is rejected cleanly
 
+## Phase notes
+
+Phase 16 adds the Vercel API proxy for safer real AI generation. Future phases can add stronger production safeguards such as server-side rate limiting, monitoring, accounts, or cloud sync if needed.

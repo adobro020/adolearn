@@ -1,16 +1,14 @@
 import type { Course } from '../types/course';
 import type { CourseStyle, Difficulty, LessonLength } from '../types/settings';
-import { buildCourseGenerationPrompt } from './aiPromptService';
 import { normalizeCourseFromAIJSON } from './courseNormalizer';
 import { validateCourse } from './courseValidator';
-import { getAdoLearnCourseResponseJSONSchema } from './schemaService';
 
 export type AICourseGenerationErrorCode =
-  | 'missing_api_key'
-  | 'missing_model'
   | 'network_error'
   | 'api_error'
   | 'rate_limit'
+  | 'server_configuration_missing'
+  | 'source_too_large'
   | 'empty_response'
   | 'invalid_json'
   | 'invalid_schema';
@@ -33,8 +31,7 @@ export interface GenerateCourseWithAIInput {
   difficulty: Difficulty;
   courseStyle: CourseStyle;
   lessonLength: LessonLength;
-  apiKey: string;
-  modelName: string;
+  modelName?: string;
 }
 
 export interface GenerateCourseWithAIResult {
@@ -43,227 +40,135 @@ export interface GenerateCourseWithAIResult {
   rawResponseText: string;
 }
 
-interface OpenAIResponsesAPIContentPart {
-  type?: string;
-  text?: string;
+interface GenerateCourseAPIErrorPayload {
+  error?: string;
+  code?: string;
+  details?: string[];
 }
 
-interface OpenAIResponsesAPIOutputItem {
-  type?: string;
-  content?: OpenAIResponsesAPIContentPart[];
+interface GenerateCourseAPISuccessPayload {
+  course?: unknown;
+  rawCourse?: unknown;
+  validationWarnings?: string[];
 }
 
-interface OpenAIResponsesAPIResponse {
-  output_text?: string;
-  output?: OpenAIResponsesAPIOutputItem[];
-  error?: {
-    message?: string;
-    type?: string;
-    code?: string;
-  };
-}
-
-const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
+const GENERATE_COURSE_API_URL = '/api/generate-course';
 const MAX_VALIDATION_ERRORS_IN_MESSAGE = 8;
 
 function getSourcePreview(sourceMaterial: string): string {
   return sourceMaterial.replace(/\s+/g, ' ').trim().slice(0, 500);
 }
 
-function cleanModelName(modelName: string): string {
-  return modelName.trim() || 'gpt-5-nano';
+function cleanModelName(modelName?: string): string | undefined {
+  const cleaned = modelName?.trim();
+  return cleaned || undefined;
 }
 
-function extractResponseText(payload: OpenAIResponsesAPIResponse): string {
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
+function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | null): AICourseGenerationError {
+  const code = payload?.code ?? '';
+  const details = payload?.details;
 
-  const outputText = payload.output
-    ?.flatMap((item) => item.content ?? [])
-    .filter((content) => content.type === 'output_text' || content.type === 'text' || !content.type)
-    .map((content) => content.text ?? '')
-    .join('\n')
-    .trim();
-
-  return outputText ?? '';
-}
-
-function stripMarkdownCodeFence(value: string): string {
-  const trimmed = value.trim();
-  const codeFenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return codeFenceMatch ? codeFenceMatch[1].trim() : trimmed;
-}
-
-function extractJSONObjectText(value: string): string {
-  const withoutFence = stripMarkdownCodeFence(value);
-
-  if (withoutFence.startsWith('{') && withoutFence.endsWith('}')) {
-    return withoutFence;
-  }
-
-  const firstBrace = withoutFence.indexOf('{');
-  const lastBrace = withoutFence.lastIndexOf('}');
-
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return withoutFence.slice(firstBrace, lastBrace + 1);
-  }
-
-  return withoutFence;
-}
-
-function parseCourseJSON(rawResponseText: string): unknown {
-  try {
-    const parsed = JSON.parse(extractJSONObjectText(rawResponseText)) as unknown;
-
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      !Array.isArray(parsed) &&
-      'course' in parsed &&
-      typeof (parsed as { course?: unknown }).course === 'object'
-    ) {
-      return (parsed as { course: unknown }).course;
-    }
-
-    return parsed;
-  } catch {
-    throw new AICourseGenerationError(
-      'invalid_json',
-      'The AI response was not valid JSON. Try again or use a shorter source.'
+  if (status === 413 || code === 'source_too_large' || code === 'request_too_large') {
+    return new AICourseGenerationError(
+      'source_too_large',
+      'The source material is too large. Try a shorter paste.',
+      details
     );
   }
-}
 
-function mapOpenAIError(status: number, payload: unknown): AICourseGenerationError {
-  const message =
-    typeof payload === 'object' &&
-    payload !== null &&
-    'error' in payload &&
-    typeof (payload as { error?: { message?: unknown } }).error?.message === 'string'
-      ? (payload as { error: { message: string } }).error.message
-      : '';
+  if (code === 'server_configuration_missing') {
+    return new AICourseGenerationError(
+      'server_configuration_missing',
+      'Server configuration is missing.',
+      details
+    );
+  }
 
-  if (status === 429) {
+  if (status === 429 || code === 'rate_limit') {
     return new AICourseGenerationError(
       'rate_limit',
-      'The AI API rate limit was reached. Wait a moment, then retry or switch to mock mode.',
-      message ? [message] : undefined
+      'AI generation is temporarily unavailable.',
+      details
     );
   }
 
-  if (status === 401 || status === 403) {
+  if (status >= 500) {
     return new AICourseGenerationError(
       'api_error',
-      'The AI API rejected your API key. Check it in Settings, then try again.',
-      message ? [message] : undefined
+      payload?.error || 'AI generation is temporarily unavailable.',
+      details
     );
   }
 
   return new AICourseGenerationError(
     'api_error',
-    'Generation failed. You can retry or switch to mock mode.',
-    message ? [message] : undefined
+    payload?.error || 'Generation failed. Please try again.',
+    details
   );
 }
 
-async function readAPIErrorPayload(response: Response): Promise<unknown> {
+async function readResponseJSON(response: Response): Promise<unknown> {
   try {
     return (await response.json()) as unknown;
   } catch {
-    try {
-      return { error: { message: await response.text() } };
-    } catch {
-      return null;
-    }
+    throw new AICourseGenerationError(
+      'invalid_json',
+      'The generated course was not valid. Try again.'
+    );
   }
 }
 
-async function callOpenAIResponsesAPI(prompt: string, apiKey: string, modelName: string): Promise<string> {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function extractCoursePayload(payload: unknown): unknown {
+  if (isRecord(payload) && 'course' in payload) {
+    return payload.course;
+  }
+
+  if (isRecord(payload) && 'rawCourse' in payload) {
+    return payload.rawCourse;
+  }
+
+  return payload;
+}
+
+async function callVercelProxy(input: GenerateCourseWithAIInput): Promise<GenerateCourseAPISuccessPayload> {
   let response: Response;
 
   try {
-    response = await fetch(OPENAI_RESPONSES_API_URL, {
+    response = await fetch(GENERATE_COURSE_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: modelName,
-        input: [
-          {
-            role: 'system',
-            content: [
-              {
-                type: 'input_text',
-                text:
-                  'You generate AdoLearn course JSON. Return exactly one valid JSON object and no markdown.'
-              }
-            ]
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text: prompt
-              }
-            ]
-          }
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'adolearn_course',
-            description: 'A complete AdoLearn Course object.',
-            schema: getAdoLearnCourseResponseJSONSchema(),
-            strict: false
-          }
-        },
-        store: false
+        sourceMaterial: input.sourceMaterial,
+        optionalTitle: input.optionalTitle,
+        difficulty: input.difficulty,
+        courseStyle: input.courseStyle,
+        lessonLength: input.lessonLength,
+        modelName: cleanModelName(input.modelName)
       })
     });
   } catch {
     throw new AICourseGenerationError(
       'network_error',
-      'Network error. Check your connection, then retry or switch to mock mode.'
+      'Generation failed. Please try again.'
     );
   }
+
+  const payload = await readResponseJSON(response);
 
   if (!response.ok) {
-    throw mapOpenAIError(response.status, await readAPIErrorPayload(response));
-  }
-
-  let payload: OpenAIResponsesAPIResponse;
-
-  try {
-    payload = (await response.json()) as OpenAIResponsesAPIResponse;
-  } catch {
-    throw new AICourseGenerationError(
-      'invalid_json',
-      'The AI response was not valid JSON. Try again or use a shorter source.'
+    throw mapProxyError(
+      response.status,
+      isRecord(payload) ? (payload as GenerateCourseAPIErrorPayload) : null
     );
   }
 
-  if (payload.error) {
-    throw new AICourseGenerationError(
-      payload.error.code === 'rate_limit_exceeded' ? 'rate_limit' : 'api_error',
-      'Generation failed. You can retry or switch to mock mode.',
-      payload.error.message ? [payload.error.message] : undefined
-    );
-  }
-
-  const outputText = extractResponseText(payload);
-
-  if (!outputText) {
-    throw new AICourseGenerationError(
-      'empty_response',
-      'The model returned an empty response. Try again or use a shorter source.'
-    );
-  }
-
-  return outputText;
+  return isRecord(payload) ? (payload as GenerateCourseAPISuccessPayload) : { course: payload };
 }
 
 export async function generateCourseWithAI({
@@ -272,42 +177,37 @@ export async function generateCourseWithAI({
   difficulty,
   courseStyle,
   lessonLength,
-  apiKey,
   modelName
 }: GenerateCourseWithAIInput): Promise<GenerateCourseWithAIResult> {
-  const cleanedApiKey = apiKey.trim();
-  const cleanedModelName = cleanModelName(modelName);
-
-  if (!cleanedApiKey) {
-    throw new AICourseGenerationError('missing_api_key', 'Your API key is missing. Add it in Settings.');
-  }
-
-  if (!cleanedModelName) {
-    throw new AICourseGenerationError(
-      'missing_model',
-      'The model name is missing. Add a model name in Settings or reset settings to defaults.'
-    );
-  }
-
-  const prompt = buildCourseGenerationPrompt(sourceMaterial, {
+  const payload = await callVercelProxy({
+    sourceMaterial,
     optionalTitle,
     difficulty,
     courseStyle,
-    lessonLength
+    lessonLength,
+    modelName
   });
-  const rawResponseText = await callOpenAIResponsesAPI(prompt, cleanedApiKey, cleanedModelName);
-  const parsedCourse = parseCourseJSON(rawResponseText);
-  const draftValidation = validateCourse(parsedCourse, { allowNormalizerRepair: true });
+
+  const rawCourse = extractCoursePayload(payload);
+
+  if (!rawCourse) {
+    throw new AICourseGenerationError(
+      'empty_response',
+      'Generation failed. Please try again.'
+    );
+  }
+
+  const draftValidation = validateCourse(rawCourse, { allowNormalizerRepair: true });
 
   if (!draftValidation.isValid) {
     throw new AICourseGenerationError(
       'invalid_schema',
-      'The AI returned JSON, but it did not match the AdoLearn course schema. Try again or use mock mode.',
+      'The generated course was not valid. Try again.',
       draftValidation.errors.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
     );
   }
 
-  const normalizedCourse = normalizeCourseFromAIJSON(parsedCourse, {
+  const normalizedCourse = normalizeCourseFromAIJSON(rawCourse, {
     fallbackTitle: optionalTitle?.trim() || 'Generated Learning Path',
     fallbackDifficulty: difficulty,
     fallbackCourseStyle: courseStyle,
@@ -318,14 +218,18 @@ export async function generateCourseWithAI({
   if (!normalizedValidation.isValid) {
     throw new AICourseGenerationError(
       'invalid_schema',
-      'The generated course could not be cleaned into a valid AdoLearn course. Try again or use mock mode.',
+      'The generated course was not valid. Try again.',
       normalizedValidation.errors.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
     );
   }
 
   return {
     course: normalizedCourse,
-    validationWarnings: [...draftValidation.warnings, ...normalizedValidation.warnings],
-    rawResponseText
+    validationWarnings: [
+      ...(payload.validationWarnings ?? []),
+      ...draftValidation.warnings,
+      ...normalizedValidation.warnings
+    ],
+    rawResponseText: JSON.stringify(rawCourse)
   };
 }

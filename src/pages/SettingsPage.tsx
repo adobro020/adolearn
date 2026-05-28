@@ -30,23 +30,16 @@ const generationModes: Array<{
   value: GenerationMode;
   label: string;
   description: string;
-  disabled?: boolean;
 }> = [
   {
     value: 'mock',
-    label: 'Mock',
-    description: 'Use the browser-only mock generator.'
-  },
-  {
-    value: 'api',
-    label: 'Real AI with user API key',
-    description: 'Calls the AI API directly from this browser using your locally stored key.'
+    label: 'Mock mode',
+    description: 'Use the browser-only mock generator for testing and demos.'
   },
   {
     value: 'vercel_proxy',
-    label: 'Vercel proxy, coming soon',
-    description: 'Disabled for now. Planned for Phase 16 as a safer server-side proxy.',
-    disabled: true
+    label: 'Vercel proxy mode',
+    description: 'Use the server-side Vercel function for real AI course generation.'
   }
 ];
 
@@ -302,13 +295,13 @@ export function SettingsPage() {
       <PageCard
         eyebrow="Settings"
         title="Control AdoLearn locally"
-        description="AdoLearn is running in static frontend mode for Vercel. Settings, courses, progress, review history, and imports stay in this browser through localStorage."
+        description="AdoLearn is Vercel-ready. Settings, courses, progress, review history, and imports stay in this browser through localStorage."
       >
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100">
-            <h3 className="text-lg font-black text-slate-950">Vercel-ready frontend mode</h3>
+            <h3 className="text-lg font-black text-slate-950">Vercel-ready app</h3>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
-              No backend, accounts, database, or Vercel API route is connected yet. Real AI mode can call the API directly from this browser, and Phase 16 can add Vercel proxy mode for safer AI calls.
+              Real AI generation uses the Vercel proxy route. Courses and progress remain local to this browser; AdoLearn still has no accounts, database, or cloud course storage.
             </p>
           </div>
           <div className="rounded-[1.75rem] bg-white p-5 ring-1 ring-slate-200">
@@ -338,13 +331,9 @@ export function SettingsPage() {
       <PageCard
         eyebrow="AI settings"
         title="Generation controls"
-        description="These settings are stored locally only. Mock mode stays local; real AI mode uses your browser-stored API key."
+        description="Choose local mock generation or real AI generation through the Vercel proxy."
       >
         <div className="space-y-5">
-          <NoticeBanner tone="warning" title="API key security">
-            Browser-only apps cannot fully protect API keys. Your key is stored locally in this browser. For production, use a Vercel API route or another backend proxy.
-          </NoticeBanner>
-
           <label className="block">
             <span className="text-sm font-black text-slate-700">Model name</span>
             <input
@@ -354,23 +343,14 @@ export function SettingsPage() {
               placeholder="gpt-5-nano"
               className="mt-2 w-full rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-950 ring-1 ring-slate-200 transition focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
             />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-black text-slate-700">API key</span>
-            <input
-              type="password"
-              value={settings.apiKey}
-              onChange={(event) => updateSetting('apiKey', event.target.value)}
-              placeholder="Stored locally in this browser"
-              className="mt-2 w-full rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-950 ring-1 ring-slate-200 transition focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              autoComplete="off"
-            />
+            <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">
+              Supported proxy models: gpt-5-nano, gpt-5-mini, and gpt-5. Unsupported values fall back to gpt-5-nano.
+            </span>
           </label>
 
           <div>
             <p className="text-sm font-black text-slate-700">Generation mode</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
               {generationModes.map((mode) => {
                 const isSelected = settings.generationMode === mode.value;
 
@@ -378,15 +358,12 @@ export function SettingsPage() {
                   <button
                     key={mode.value}
                     type="button"
-                    disabled={mode.disabled}
                     aria-pressed={isSelected}
                     onClick={() => updateSetting('generationMode', mode.value)}
                     className={`rounded-3xl p-4 text-left ring-1 transition ${
                       isSelected
                         ? 'bg-emerald-600 text-white ring-emerald-600 shadow-lg shadow-emerald-100'
-                        : mode.disabled
-                          ? 'bg-slate-50 text-slate-400 ring-slate-200'
-                          : 'bg-white text-slate-700 ring-slate-200 hover:-translate-y-0.5 hover:ring-emerald-200'
+                        : 'bg-white text-slate-700 ring-slate-200 hover:-translate-y-0.5 hover:ring-emerald-200'
                     }`}
                   >
                     <span className="block text-base font-black">{mode.label}</span>

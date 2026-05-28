@@ -1,6 +1,6 @@
 /**
  * User-selectable course generation preferences and app settings.
- * These are plain type definitions only; persistence lives in src/services.
+ * These settings are stored locally in the browser; API secrets live only in Vercel env vars.
  */
 export type Difficulty = 'Auto' | 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -14,11 +14,10 @@ export type LessonLength = 'Short' | 'Medium' | 'Long';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
-export type GenerationMode = 'mock' | 'api' | 'vercel_proxy';
+export type GenerationMode = 'mock' | 'vercel_proxy';
 
 export interface AppSettings {
   modelName: string;
-  apiKey: string;
   theme: ThemePreference;
   generationMode: GenerationMode;
   preferredDifficulty: Difficulty;

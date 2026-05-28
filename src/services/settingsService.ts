@@ -11,7 +11,6 @@ import { removeItem, safeGetJSON, safeSetJSON } from './storageService';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   modelName: 'gpt-5-nano',
-  apiKey: '',
   theme: 'system',
   generationMode: 'mock',
   preferredDifficulty: 'Auto',
@@ -61,15 +60,17 @@ export function normalizeSettings(value: unknown): AppSettings {
   ];
   const lessonLengthValues: readonly LessonLength[] = ['Short', 'Medium', 'Long'];
   const themeValues: readonly ThemePreference[] = ['system', 'light', 'dark'];
-  const generationModeValues: readonly GenerationMode[] = ['mock', 'api', 'vercel_proxy'];
+  const generationModeValues: readonly GenerationMode[] = ['mock', 'vercel_proxy'];
 
   return {
     modelName: asNonEmptyString(value.modelName, DEFAULT_SETTINGS.modelName),
-    apiKey: asNonEmptyString(value.apiKey, DEFAULT_SETTINGS.apiKey),
     theme: isOneOf(value.theme, themeValues) ? value.theme : DEFAULT_SETTINGS.theme,
-    generationMode: isOneOf(value.generationMode, generationModeValues)
-      ? value.generationMode
-      : DEFAULT_SETTINGS.generationMode,
+    generationMode:
+      value.generationMode === 'api'
+        ? 'vercel_proxy'
+        : isOneOf(value.generationMode, generationModeValues)
+          ? value.generationMode
+          : DEFAULT_SETTINGS.generationMode,
     preferredDifficulty: isOneOf(value.preferredDifficulty, difficultyValues)
       ? value.preferredDifficulty
       : DEFAULT_SETTINGS.preferredDifficulty,
@@ -93,7 +94,17 @@ export function normalizeSettings(value: unknown): AppSettings {
 
 export function getSettings(): AppSettings {
   const storedSettings = safeGetJSON<unknown>(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
-  return normalizeSettings(storedSettings);
+  const normalizedSettings = normalizeSettings(storedSettings);
+
+  // Rewrite older settings without legacy secret fields or retired generation modes.
+  if (
+    isRecord(storedSettings) &&
+    ('apiKey' in storedSettings || storedSettings.generationMode === 'api')
+  ) {
+    safeSetJSON(STORAGE_KEYS.settings, normalizedSettings);
+  }
+
+  return normalizedSettings;
 }
 
 export function saveSettings(settings: AppSettings): boolean {
