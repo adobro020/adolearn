@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
   "engines": {
     "node": "22.x"
-  }
+  },
   "description": "A Vercel-ready learning app built with React, TypeScript, Vite, Tailwind CSS, and a serverless AI generation proxy.",
   "scripts": {
     "dev": "vite",
