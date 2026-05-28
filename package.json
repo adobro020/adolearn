@@ -1,26 +1,13 @@
 {
   "name": "adolearn",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "description": "A Vercel-ready learning app built with React, TypeScript, Vite, Tailwind CSS, and a serverless AI generation proxy.",
+  "version": "0.0.0",
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "npm@10.9.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
-  },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@vitejs/plugin-react": "^6.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwindcss": "^4.0.0",
-    "vite": "^8.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^25.9.1",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.9.0"
   }
 }
