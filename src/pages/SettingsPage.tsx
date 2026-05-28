@@ -37,9 +37,9 @@ const generationModes: Array<{
     description: 'Use the browser-only mock generator for testing and demos.'
   },
   {
-    value: 'vercel_proxy',
-    label: 'Vercel proxy mode',
-    description: 'Use the server-side Vercel function for real AI course generation.'
+    value: 'server_proxy',
+    label: 'Server proxy mode',
+    description: 'Use the server-side server function for real AI course generation.'
   }
 ];
 
@@ -212,7 +212,7 @@ export function SettingsPage() {
     refreshLocalData();
     showNotice(
       cleared ? 'success' : 'error',
-      cleared ? 'All local AdoLearn data was cleared.' : 'Some local data could not be cleared.'
+      cleared ? 'All saved AdoLearn data was cleared.' : 'Some saved data could not be cleared.'
     );
   }
 
@@ -295,18 +295,18 @@ export function SettingsPage() {
       <PageCard
         eyebrow="Settings"
         title="Control AdoLearn locally"
-        description="AdoLearn is Vercel-ready. Settings, courses, progress, review history, and imports stay in this browser through localStorage."
+        description="AdoLearn is Production-ready. Settings, courses, progress, review history, and imports stay in this browser through browser storage."
       >
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100">
-            <h3 className="text-lg font-black text-slate-950">Vercel-ready app</h3>
+            <h3 className="text-lg font-black text-slate-950">Production-ready app</h3>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
-              Real AI generation uses the Vercel proxy route. Courses and progress remain local to this browser; AdoLearn still has no accounts, database, or cloud course storage.
+              Real AI generation uses the Server proxy route. Courses and progress remain local to this browser; AdoLearn still has no accounts, database, or cloud course storage.
             </p>
           </div>
           <div className="rounded-[1.75rem] bg-white p-5 ring-1 ring-slate-200">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-              Local storage
+              Browser save status
             </p>
             <p className="mt-2 text-2xl font-black text-slate-950">
               {storageAvailable ? 'Available' : 'Unavailable'}
@@ -314,7 +314,7 @@ export function SettingsPage() {
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
               {storageAvailable
                 ? 'Your browser can currently save local AdoLearn data.'
-                : 'This browser may block localStorage, so saved data may not persist.'}
+                : 'This browser may block browser storage, so saved data may not persist.'}
             </p>
           </div>
         </div>
@@ -331,7 +331,7 @@ export function SettingsPage() {
       <PageCard
         eyebrow="AI settings"
         title="Generation controls"
-        description="Choose local mock generation or real AI generation through the Vercel proxy."
+        description="Choose local mock generation or real AI generation through the Server proxy."
       >
         <div className="space-y-5">
           <label className="block">

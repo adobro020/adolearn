@@ -31,7 +31,7 @@ const COURSE_STYLE_OPTIONS: CourseStyle[] = [
 const LESSON_LENGTH_OPTIONS: LessonLength[] = ['Short', 'Medium', 'Long'];
 
 const MINIMUM_RECOMMENDED_CHARACTERS = 180;
-const LOCAL_STORAGE_COURSE_WARNING_BYTES = 4_500_000;
+const BROWSER_STORAGE_COURSE_WARNING_BYTES = 4_500_000;
 const GENERATION_STEPS: GenerationStep[] = [
   {
     label: 'Reading your material',
@@ -124,8 +124,8 @@ function getStepState(index: number, activeStepIndex: number, isSuccess: boolean
 }
 
 function getGenerationModeLabel(settings: AppSettings): string {
-  if (settings.generationMode === 'vercel_proxy') {
-    return 'Vercel proxy';
+  if (settings.generationMode === 'server_proxy') {
+    return 'Server proxy';
   }
 
   return 'Mock';
@@ -135,8 +135,8 @@ function getCourseByteSize(course: Course): number {
   return new Blob([JSON.stringify(course)]).size;
 }
 
-function isLikelyTooLargeForLocalStorage(course: Course): boolean {
-  return getCourseByteSize(course) > LOCAL_STORAGE_COURSE_WARNING_BYTES;
+function isLikelyTooLargeForBrowserStorage(course: Course): boolean {
+  return getCourseByteSize(course) > BROWSER_STORAGE_COURSE_WARNING_BYTES;
 }
 
 function formatGenerationError(error: unknown): string {
@@ -214,7 +214,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       });
     }
 
-    if (currentSettings.generationMode === 'vercel_proxy') {
+    if (currentSettings.generationMode === 'server_proxy') {
       const result = await generateCourseWithAI({
         sourceMaterial: trimmedSourceMaterial,
         optionalTitle: courseTitle,
@@ -264,14 +264,14 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       await advanceToStep(6, 250);
 
       if (!isStorageAvailable()) {
-        throw new Error('This browser is blocking localStorage, so AdoLearn cannot save the generated course locally.');
+        throw new Error('This browser is blocking browser storage, so AdoLearn cannot save the generated course locally.');
       }
 
       const didSaveCourse = saveCourse(generatedCourse);
 
       if (!didSaveCourse) {
         throw new Error(
-          isLikelyTooLargeForLocalStorage(generatedCourse)
+          isLikelyTooLargeForBrowserStorage(generatedCourse)
             ? 'The generated course was too large to save locally. Try a shorter source or shorter course settings.'
             : 'The generated course could not be saved locally. Try again or switch to mock mode.'
         );
@@ -295,7 +295,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       <PageCard
         eyebrow="Create"
         title="Build a learning path"
-        description="Paste notes, a transcript, an article, or a study guide. AdoLearn can use the local mock generator or, if enabled in Settings, real AI through the Vercel proxy."
+        description="Paste notes, a transcript, an article, or a study guide. AdoLearn can use the local mock generator or, if enabled in Settings, real AI through the Server proxy."
       >
         <form
           className="space-y-6"

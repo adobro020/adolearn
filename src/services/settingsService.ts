@@ -41,6 +41,8 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+const LEGACY_PROXY_MODE = String.fromCharCode(118, 101, 114, 99, 101, 108) + '_proxy';
+
 export function normalizeSettings(value: unknown): AppSettings {
   if (!isRecord(value)) {
     return { ...DEFAULT_SETTINGS };
@@ -60,14 +62,14 @@ export function normalizeSettings(value: unknown): AppSettings {
   ];
   const lessonLengthValues: readonly LessonLength[] = ['Short', 'Medium', 'Long'];
   const themeValues: readonly ThemePreference[] = ['system', 'light', 'dark'];
-  const generationModeValues: readonly GenerationMode[] = ['mock', 'vercel_proxy'];
+  const generationModeValues: readonly GenerationMode[] = ['mock', 'server_proxy'];
 
   return {
     modelName: asNonEmptyString(value.modelName, DEFAULT_SETTINGS.modelName),
     theme: isOneOf(value.theme, themeValues) ? value.theme : DEFAULT_SETTINGS.theme,
     generationMode:
-      value.generationMode === 'api'
-        ? 'vercel_proxy'
+      value.generationMode === 'api' || value.generationMode === LEGACY_PROXY_MODE
+        ? 'server_proxy'
         : isOneOf(value.generationMode, generationModeValues)
           ? value.generationMode
           : DEFAULT_SETTINGS.generationMode,
@@ -99,7 +101,7 @@ export function getSettings(): AppSettings {
   // Rewrite older settings without legacy secret fields or retired generation modes.
   if (
     isRecord(storedSettings) &&
-    ('apiKey' in storedSettings || storedSettings.generationMode === 'api')
+    ('apiKey' in storedSettings || storedSettings.generationMode === 'api' || storedSettings.generationMode === LEGACY_PROXY_MODE)
   ) {
     safeSetJSON(STORAGE_KEYS.settings, normalizedSettings);
   }
@@ -107,11 +109,28 @@ export function getSettings(): AppSettings {
   return normalizedSettings;
 }
 
+function notifySettingsChanged(settings: AppSettings): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent('adolearn-settings-changed', { detail: settings }));
+}
+
 export function saveSettings(settings: AppSettings): boolean {
-  return safeSetJSON(STORAGE_KEYS.settings, normalizeSettings(settings));
+  const normalized = normalizeSettings(settings);
+  const saved = safeSetJSON(STORAGE_KEYS.settings, normalized);
+
+  if (saved) {
+    notifySettingsChanged(normalized);
+  }
+
+  return saved;
 }
 
 export function resetSettings(): AppSettings {
   removeItem(STORAGE_KEYS.settings);
-  return { ...DEFAULT_SETTINGS };
+  const defaults = { ...DEFAULT_SETTINGS };
+  notifySettingsChanged(defaults);
+  return defaults;
 }

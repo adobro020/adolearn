@@ -265,45 +265,36 @@ export function DashboardPage({
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl shadow-slate-900/15">
-        <div className="relative p-6 sm:p-8">
-          <div className="absolute -right-12 -top-14 h-36 w-36 rounded-full bg-emerald-400/30 blur-2xl" />
-          <div className="absolute -bottom-16 left-10 h-40 w-40 rounded-full bg-sky-400/20 blur-2xl" />
-          <div className="relative space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-black text-emerald-100 ring-1 ring-white/15">
-              <span aria-hidden="true">🌱</span>
-              AdoLearn
-            </div>
-            <div>
-              <h2 className="text-3xl font-black tracking-tight sm:text-4xl">AdoLearn</h2>
-              <p className="mt-2 max-w-xl text-balance text-base font-semibold leading-7 text-slate-200">
-                Turn anything into a bite-sized learning path.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={onCreateCourse}
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-white/10 transition hover:-translate-y-0.5"
-              >
-                Create a new course
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenReview(null)}
-                className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/10 transition hover:-translate-y-0.5 hover:bg-amber-200"
-              >
-                Review Mode
-              </button>
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white ring-1 ring-white/15 transition hover:bg-white/15"
-              >
-                Go to settings
-              </button>
-            </div>
-          </div>
+      <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 transition-colors sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-6">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600">Dashboard</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Ready for your next lesson?</h2>
+          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-600">
+            Continue a saved path, create something new, or review the ideas that need another pass.
+          </p>
+        </div>
+        <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:flex-row">
+          <button
+            type="button"
+            onClick={onCreateCourse}
+            className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
+          >
+            Create
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenReview(null)}
+            className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/10 transition hover:-translate-y-0.5 hover:bg-amber-200"
+          >
+            Review
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+          >
+            Settings
+          </button>
         </div>
       </section>
 
@@ -317,7 +308,7 @@ export function DashboardPage({
       <PageCard
         eyebrow="Review Mode"
         title="Practice weak spots"
-        description="Review Mode pulls from missed questions, weak concepts, and older completed lessons saved in localStorage."
+        description="Review Mode pulls from missed questions, weak concepts, and older completed lessons saved in browser storage."
       >
         <div className="space-y-5">
           <div className="rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-6">

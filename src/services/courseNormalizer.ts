@@ -330,7 +330,7 @@ function calculateEstimatedTotalMinutes(sections: Section[]): number {
   );
 }
 
-function makeLocalStorageSafe<T>(value: T): T {
+function makeBrowserStorageSafe<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
@@ -365,7 +365,7 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
     keyConcepts
   };
 
-  return makeLocalStorageSafe(normalizedCourse);
+  return makeBrowserStorageSafe(normalizedCourse);
 }
 
 export function getFirstUnlockableLessonId(course: Course): string | undefined {

@@ -134,7 +134,7 @@ function extractCoursePayload(payload: unknown): unknown {
   return payload;
 }
 
-async function callVercelProxy(input: GenerateCourseWithAIInput): Promise<GenerateCourseAPISuccessPayload> {
+async function callServerProxy(input: GenerateCourseWithAIInput): Promise<GenerateCourseAPISuccessPayload> {
   let response: Response;
 
   try {
@@ -179,7 +179,7 @@ export async function generateCourseWithAI({
   lessonLength,
   modelName
 }: GenerateCourseWithAIInput): Promise<GenerateCourseWithAIResult> {
-  const payload = await callVercelProxy({
+  const payload = await callServerProxy({
     sourceMaterial,
     optionalTitle,
     difficulty,

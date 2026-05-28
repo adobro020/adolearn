@@ -295,7 +295,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    sendError(response, 500, 'server_configuration_missing', 'Server configuration is missing.');
+    sendError(response, 503, 'server_configuration_missing', 'Server configuration is missing.');
     return;
   }
 

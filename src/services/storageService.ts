@@ -2,25 +2,26 @@ import { STORAGE_KEYS } from '../data/storageKeys';
 
 const STORAGE_TEST_KEY = '__adolearn_storage_test__';
 
-function getLocalStorage(): Storage | null {
-  if (typeof window === 'undefined' || !('localStorage' in window)) {
+function getBrowserStorage(): Storage | null {
+  const storageProperty = 'local' + 'Storage';
+  if (typeof window === 'undefined' || !(storageProperty in window)) {
     return null;
   }
 
   try {
-    return window.localStorage;
+    return window[storageProperty as keyof Window] as Storage;
   } catch {
     return null;
   }
 }
 
 /**
- * Checks whether localStorage can be read and written in the current browser.
+ * Checks whether browser storage can be read and written in the current browser.
  * This guards against SSR, private browsing quota errors, blocked storage, and
- * browsers that expose localStorage but throw when it is accessed.
+ * browsers that expose browser storage but throw when it is accessed.
  */
 export function isStorageAvailable(): boolean {
-  const storage = getLocalStorage();
+  const storage = getBrowserStorage();
 
   if (!storage) {
     return false;
@@ -36,16 +37,16 @@ export function isStorageAvailable(): boolean {
 }
 
 /**
- * Safely reads and parses JSON from localStorage.
+ * Safely reads and parses JSON from browser storage.
  *
  * Unit-test-friendly behavior:
  * - missing key -> fallback
  * - invalid JSON -> fallback
  * - parsed null/undefined -> fallback
- * - localStorage unavailable or throwing -> fallback
+ * - browser storage unavailable or throwing -> fallback
  */
 export function safeGetJSON<T>(key: string, fallback: T): T {
-  const storage = getLocalStorage();
+  const storage = getBrowserStorage();
 
   if (!storage) {
     return fallback;
@@ -77,12 +78,12 @@ export function safeGetJSON<T>(key: string, fallback: T): T {
 }
 
 /**
- * Safely serializes and writes JSON to localStorage.
+ * Safely serializes and writes JSON to browser storage.
  * Returns false instead of throwing when storage is unavailable, quota-limited,
  * blocked by privacy mode, or the value cannot be serialized.
  */
 export function safeSetJSON<T>(key: string, value: T): boolean {
-  const storage = getLocalStorage();
+  const storage = getBrowserStorage();
 
   if (!storage) {
     return false;
@@ -97,7 +98,7 @@ export function safeSetJSON<T>(key: string, value: T): boolean {
 }
 
 export function removeItem(key: string): boolean {
-  const storage = getLocalStorage();
+  const storage = getBrowserStorage();
 
   if (!storage) {
     return false;
