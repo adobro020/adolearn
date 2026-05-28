@@ -197,7 +197,7 @@ AdoLearn can run in two generation modes today:
 
 The real AI flow builds the AdoLearn prompt, requests JSON output, parses the response, validates the course schema, normalizes repairable fields, saves the final course to `localStorage`, initializes progress, and opens the Course Map.
 
-No API keys should be committed to the repository. No environment variables are required for the current browser-only mode. Phase 16 is reserved for a safer Vercel API route/proxy option.
+No API keys should be committed to the repository. No environmentt variables are required for the current browser-only mode. Phase 16 is reserved for a safer Vercel API route/proxy option.
 
 > Security warning: browser-only apps cannot fully protect API keys. Your key is stored locally in this browser. For a public app, use a Vercel API route or another backend proxy.
 
