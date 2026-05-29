@@ -31,7 +31,7 @@ export function ProgressBar({ value, label, tone = 'emerald', size = 'md' }: Pro
     <div aria-label={label} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={safeValue}>
       <div
         className={classNames(
-          'overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200',
+          'overflow-hidden rounded-full bg-slate-100/80 shadow-inner shadow-slate-200/80 ring-1 ring-slate-200/80 backdrop-blur-sm',
           size === 'sm' && 'h-2',
           size === 'md' && 'h-3',
           size === 'lg' && 'h-4'
@@ -39,7 +39,7 @@ export function ProgressBar({ value, label, tone = 'emerald', size = 'md' }: Pro
       >
         <div
           className={classNames(
-            'h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out',
+            'h-full rounded-full bg-gradient-to-r shadow-[0_0_22px_rgba(16,185,129,0.22)] transition-all duration-700 ease-out',
             toneGradient[tone]
           )}
           style={{ width: `${safeValue}%` }}

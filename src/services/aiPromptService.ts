@@ -40,7 +40,7 @@ export function buildCourseGenerationPrompt(
   const lessonsPerUnit = options.targetLessonsPerUnit ?? 3;
   const exercisesPerLesson = options.targetExercisesPerLesson ?? 5;
 
-  return `You are an expert instructional designer creating a Duolingo-style interactive course for AdoLearn.
+  return `You are an expert instructional designer creating an interactive course for AdoLearn.
 
 Your task:
 Transform the provided source material into a short, structured, interactive learning course.
@@ -76,7 +76,7 @@ Suggested course size:
 Exercise requirements:
 - Mix exercise types when possible: multiple_choice, true_false, fill_blank, matching, ordering, flashcard, scenario, explain_concept. Do not generate short_answer exercises.
 - For multiple_choice, include choices and make sure the correct answer is represented.
-- For matching, create Duolingo-style term-to-definition pairs only: each pair.left must be a short term, concept, person, process, or vocabulary phrase; each pair.right must be its concise definition or description from the source.
+- For matching, create term-to-definition pairs only: each pair.left must be a short term, concept, person, process, or vocabulary phrase; each pair.right must be its concise definition or description from the source. Definitions must be distinct and specific enough that each term maps to one clear match.
 - For ordering, include items as an array of objects shaped like { "id": "step_1", "text": "..." }. Never use plain strings in items. Include correctOrder as an array of those same item IDs.
 - For text-graded exercises, include acceptedAnswers with concise expected keywords or phrases.
 - Every exercise must include prompt, explanation, hint, and concept when possible.

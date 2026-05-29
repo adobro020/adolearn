@@ -131,87 +131,51 @@ function getVisibleStepIndex(activeStepIndex: number): number {
 function FullScreenGenerationOverlay({
   activeStepIndex,
   progressValue,
-  isSuccess,
-  generationModeLabel
+  isSuccess
 }: {
   activeStepIndex: number;
   progressValue: number;
   isSuccess: boolean;
-  generationModeLabel: string;
 }) {
   const visibleStepIndex = getVisibleStepIndex(activeStepIndex);
   const activeStep = GENERATION_STEPS[visibleStepIndex];
   const displayProgress = Math.round(progressValue);
   const headline = isSuccess ? 'Course ready' : 'Building your course';
-  const detail = isSuccess ? 'Saved successfully. Opening your course map now.' : activeStep.detail;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-md"
       role="status"
       aria-live="polite"
       aria-busy={!isSuccess}
     >
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-slate-950 dark:ring-zinc-800 sm:p-8">
+      <div className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] bg-white p-6 text-center shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-slate-950 dark:ring-zinc-800 sm:p-10">
         <div className="absolute -left-14 top-10 h-40 w-40 rounded-full bg-emerald-200/60 blur-3xl" aria-hidden="true" />
         <div className="absolute -right-8 bottom-0 h-56 w-56 rounded-full bg-sky-200/60 blur-3xl" aria-hidden="true" />
 
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-6">
+          <img
+            src={isSuccess ? ROBOT_GRAPHICS.celebration : ROBOT_GRAPHICS.workflow}
+            alt={isSuccess ? 'Robot celebrating a completed course' : 'Robot assembling a course workflow'}
+            className="h-64 w-full object-contain sm:h-80"
+          />
+
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 ring-1 ring-emerald-100 dark:bg-slate-950 dark:text-emerald-300 dark:ring-emerald-500/40">
-              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden="true" />
-              {generationModeLabel} generation
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-end gap-4">
-              <div>
-                <p className="text-6xl font-black tracking-tight text-slate-950 dark:text-white sm:text-7xl">
-                  {displayProgress}%
-                </p>
-                <p className="mt-2 text-base font-black text-slate-500 dark:text-zinc-300">
-                  {headline}
-                </p>
-              </div>
-              <div className="mb-2 flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-emerald-400 motion-safe:animate-bounce-soft" aria-hidden="true" />
-                <span className="h-3 w-3 rounded-full bg-sky-400 motion-safe:animate-pulse" aria-hidden="true" />
-                <span className="h-3 w-3 rounded-full bg-violet-400 motion-safe:animate-bounce-soft" aria-hidden="true" />
-              </div>
-            </div>
-
-            <div className="mt-6 max-w-2xl rounded-[1.75rem] bg-slate-50/90 p-5 ring-1 ring-slate-200 dark:bg-zinc-950 dark:ring-zinc-800">
-              <p className="text-lg font-black tracking-tight text-slate-950 dark:text-white">
-                {isSuccess ? 'Everything is saved and ready.' : activeStep.label}
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-zinc-300">
-                {detail}
-              </p>
-              <div className="mt-5">
-                <ProgressBar
-                  value={displayProgress}
-                  label="Course generation progress"
-                  tone={isSuccess ? 'emerald' : 'sky'}
-                  size="lg"
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
-                <span>Creating sections, units, and lessons</span>
-                <span>{displayProgress}% complete</span>
-              </div>
-            </div>
+            <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+              {headline}
+            </h2>
+            <p className="mt-3 text-sm font-bold leading-6 text-slate-500 dark:text-zinc-300">
+              {isSuccess ? 'Opening your course map now.' : activeStep.label}
+            </p>
           </div>
 
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute left-4 top-10 hidden h-16 w-16 rounded-3xl bg-amber-100/90 ring-1 ring-amber-200 lg:block" aria-hidden="true" />
-            <div className="absolute right-3 top-3 hidden h-12 w-12 rounded-full bg-emerald-200/80 lg:block motion-safe:animate-pulse" aria-hidden="true" />
-            <div className="absolute -left-1 bottom-12 hidden h-14 w-14 rounded-2xl bg-violet-100/90 ring-1 ring-violet-200 lg:block" aria-hidden="true" />
-            <div className="rounded-[2rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-4 ring-1 ring-emerald-100 shadow-lg shadow-emerald-100/60 dark:bg-zinc-950 dark:ring-zinc-800">
-              <img
-                src={isSuccess ? ROBOT_GRAPHICS.celebration : ROBOT_GRAPHICS.workflow}
-                alt={isSuccess ? 'Robot celebrating a completed course' : 'Robot assembling a course workflow'}
-                className="mx-auto h-80 w-full object-contain"
-              />
-            </div>
+          <div className="w-full max-w-xl">
+            <ProgressBar
+              value={displayProgress}
+              label="Course generation progress"
+              tone={isSuccess ? 'emerald' : 'sky'}
+              size="lg"
+            />
           </div>
         </div>
       </div>
@@ -532,14 +496,13 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           activeStepIndex={activeStepIndex}
           progressValue={generationProgress}
           isSuccess={Boolean(successMessage)}
-          generationModeLabel={generationModeLabel}
         />
       ) : null}
 
       <PageCard
         eyebrow="Create"
         title="Build a learning path"
-        description="Paste notes, a transcript, an article, or a study guide. AdoLearn uses the Server proxy and your selected GPT-5 model to generate a real course."
+        description="Paste notes, a transcript, an article, or a study guide. AdoLearn uses the Server proxy and your selected GPT-5 model to generate a structured course."
       >
         <form
           className="space-y-6"
@@ -556,7 +519,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                   Source readiness
                 </p>
                 <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
-                  Turn anything into a Duolingo-style learning path
+                  Turn anything into a structured learning path
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
                   More detail usually creates better lessons. Short sources still work, but richer material usually creates better sections, units, and practice.
