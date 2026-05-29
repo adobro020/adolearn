@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { BottomNav } from './components/BottomNav';
 import { Header } from './components/Header';
 import { CourseMapPage } from './pages/CourseMapPage';
 import { CreateCoursePage } from './pages/CreateCoursePage';
@@ -274,8 +273,6 @@ export default function App() {
   }
 
   const isLessonFullscreen = activePage === 'lessonPlayer';
-  const shouldShowBottomNav = activePage !== 'lessonPlayer' && activePage !== 'notFound';
-
   if (isLessonFullscreen) {
     return (
       <div className="min-h-screen bg-white text-slate-950 transition-colors duration-300 dark:bg-[#080a12] dark:text-slate-100">
@@ -288,11 +285,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.14),_transparent_30rem),linear-gradient(180deg,_#fbfdfa,_#eef5ff)] text-slate-950 transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.10),_transparent_30rem),linear-gradient(180deg,_#08111f,_#090d18)] dark:text-slate-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 pb-28 md:px-6 md:py-6">
-        <Header onLogoClick={openDashboard} />
-        {shouldShowBottomNav ? <BottomNav activePage={activePage as PageId} onPageChange={handlePageNav} /> : null}
+      <Header activePage={activePage} onLogoClick={openDashboard} onPageChange={handlePageNav} />
 
-        <main className="mx-auto mt-6 w-full max-w-5xl flex-1" id="main-content" aria-live="polite">
+      <div className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-6xl flex-col px-3 pb-12 pt-6 md:px-6">
+        <main className="mx-auto w-full max-w-5xl flex-1" id="main-content" aria-live="polite">
           {renderPage()}
         </main>
       </div>
