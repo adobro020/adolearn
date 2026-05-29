@@ -97,7 +97,7 @@ function normalizeLessonType(value: unknown): LessonType {
 }
 
 function normalizeExerciseType(value: unknown): ExerciseType {
-  return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'short_answer';
+  return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'explain_concept';
 }
 
 function normalizeAnswer(value: unknown): ExerciseAnswer | undefined {
@@ -234,7 +234,6 @@ function getDefaultExplanation(exerciseType: ExerciseType): string {
     fill_blank: 'The blank should be filled with a key idea from the lesson.',
     matching: 'The correct matches connect terms to their meanings.',
     ordering: 'The correct order follows the logical sequence taught in the lesson.',
-    short_answer: 'A strong answer uses the lesson concept in clear language.',
     flashcard: 'This flashcard is meant to strengthen quick recall.',
     scenario: 'The scenario applies the lesson concept to a realistic situation.',
     explain_concept: 'A good explanation defines the concept and says why it matters.'

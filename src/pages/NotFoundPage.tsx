@@ -1,5 +1,3 @@
-import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
-
 interface NotFoundPageProps {
   onGoHome: () => void;
   onCreateCourse: () => void;
@@ -40,8 +38,8 @@ export function NotFoundPage({ onGoHome, onCreateCourse }: NotFoundPageProps) {
 
         <div className="rounded-[2rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-4 ring-1 ring-emerald-100 dark:from-slate-900 dark:to-slate-950 dark:ring-slate-700">
           <img
-            src={ROBOT_GRAPHICS.teacher}
-            alt="A friendly robot mascot pointing to a lesson board"
+            src="/assets/robot/robot-404.png"
+            alt="A puzzled robot mascot holding a 404 sign"
             className="mx-auto h-80 w-full object-contain"
           />
         </div>

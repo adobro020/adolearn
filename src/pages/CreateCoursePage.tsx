@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from 'react';
 import { PageCard } from '../components/PageCard';
 import { NoticeBanner, ProgressBar } from '../components/Polish';
 import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
@@ -128,26 +128,20 @@ function getVisibleStepIndex(activeStepIndex: number): number {
   return Math.min(Math.max(activeStepIndex, 0), GENERATION_STEPS.length - 1);
 }
 
-function getProgressValue(activeStepIndex: number, isSuccess: boolean): number {
-  if (isSuccess) {
-    return 100;
-  }
-
-  return GENERATION_PROGRESS_MILESTONES[getVisibleStepIndex(activeStepIndex)] ?? 8;
-}
-
 function FullScreenGenerationOverlay({
   activeStepIndex,
+  progressValue,
   isSuccess,
   generationModeLabel
 }: {
   activeStepIndex: number;
+  progressValue: number;
   isSuccess: boolean;
   generationModeLabel: string;
 }) {
   const visibleStepIndex = getVisibleStepIndex(activeStepIndex);
-  const progressValue = getProgressValue(activeStepIndex, isSuccess);
   const activeStep = GENERATION_STEPS[visibleStepIndex];
+  const displayProgress = Math.round(progressValue);
   const headline = isSuccess ? 'Course ready' : 'Building your course';
   const detail = isSuccess ? 'Saved successfully. Opening your course map now.' : activeStep.detail;
 
@@ -172,7 +166,7 @@ function FullScreenGenerationOverlay({
             <div className="mt-5 flex flex-wrap items-end gap-4">
               <div>
                 <p className="text-6xl font-black tracking-tight text-slate-950 dark:text-white sm:text-7xl">
-                  {progressValue}%
+                  {displayProgress}%
                 </p>
                 <p className="mt-2 text-base font-black text-slate-500 dark:text-zinc-300">
                   {headline}
@@ -194,7 +188,7 @@ function FullScreenGenerationOverlay({
               </p>
               <div className="mt-5">
                 <ProgressBar
-                  value={progressValue}
+                  value={displayProgress}
                   label="Course generation progress"
                   tone={isSuccess ? 'emerald' : 'sky'}
                   size="lg"
@@ -202,7 +196,7 @@ function FullScreenGenerationOverlay({
               </div>
               <div className="mt-3 flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-slate-400 dark:text-zinc-500">
                 <span>Creating sections, units, and lessons</span>
-                <span>{progressValue}% complete</span>
+                <span>{displayProgress}% complete</span>
               </div>
             </div>
           </div>
@@ -276,6 +270,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeStepIndex, setActiveStepIndex] = useState(-1);
+  const [generationProgress, setGenerationProgress] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lastWarning, setLastWarning] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
@@ -291,6 +286,28 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   const characterCount = sourceMaterial.length;
   const generationModeLabel = getGenerationModeLabel(settings);
 
+  useEffect(() => {
+    if (!isGenerating || successMessage) {
+      return undefined;
+    }
+
+    const timerId = window.setInterval(() => {
+      setGenerationProgress((currentProgress) => {
+        const currentStepMinimum = GENERATION_PROGRESS_MILESTONES[getVisibleStepIndex(activeStepIndex)] ?? 8;
+        const baselineProgress = Math.max(currentProgress, currentStepMinimum);
+
+        if (baselineProgress >= 94) {
+          return baselineProgress;
+        }
+
+        const increment = baselineProgress < 35 ? 2 : baselineProgress < 75 ? 1 : 0.5;
+        return Math.min(94, baselineProgress + increment);
+      });
+    }, 650);
+
+    return () => window.clearInterval(timerId);
+  }, [activeStepIndex, isGenerating, successMessage]);
+
   function resetMessages() {
     setError(null);
     setSuccessMessage(null);
@@ -304,6 +321,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     setUploadedFileNames([]);
     resetMessages();
     setActiveStepIndex(-1);
+    setGenerationProgress(0);
   }
 
   function handleClear() {
@@ -315,6 +333,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     setUploadedFileNames([]);
     resetMessages();
     setActiveStepIndex(-1);
+    setGenerationProgress(0);
   }
 
   async function handleSourceFiles(files: FileList | File[]) {
@@ -421,6 +440,9 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
   async function advanceToStep(index: number, duration = 450) {
     setActiveStepIndex(index);
+    setGenerationProgress((currentProgress) =>
+      Math.max(currentProgress, GENERATION_PROGRESS_MILESTONES[getVisibleStepIndex(index)] ?? currentProgress)
+    );
     await sleep(duration);
   }
 
@@ -456,6 +478,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
     resetMessages();
     setActiveStepIndex(0);
+    setGenerationProgress(5);
     setIsGenerating(true);
 
     try {
@@ -489,12 +512,14 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       playLessonCompleteSound();
       setSuccessMessage('Course generated and saved locally! Opening the course map...');
       setActiveStepIndex(GENERATION_STEPS.length);
+      setGenerationProgress(100);
       await sleep(650);
       onCourseCreated(generatedCourse.id);
     } catch (generationError) {
       const message = formatGenerationError(generationError);
       setError(message);
       setActiveStepIndex((currentStepIndex) => (currentStepIndex < 0 ? 0 : currentStepIndex));
+      setGenerationProgress((currentProgress) => Math.max(currentProgress, 12));
     } finally {
       setIsGenerating(false);
     }
@@ -505,6 +530,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       {isGenerating || successMessage ? (
         <FullScreenGenerationOverlay
           activeStepIndex={activeStepIndex}
+          progressValue={generationProgress}
           isSuccess={Boolean(successMessage)}
           generationModeLabel={generationModeLabel}
         />

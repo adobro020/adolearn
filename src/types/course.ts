@@ -10,7 +10,6 @@ export type ExerciseType =
   | 'fill_blank'
   | 'matching'
   | 'ordering'
-  | 'short_answer'
   | 'flashcard'
   | 'scenario'
   | 'explain_concept';

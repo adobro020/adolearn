@@ -243,7 +243,7 @@ function validateExercise(
   }
 
   if (
-    ['fill_blank', 'short_answer', 'scenario', 'explain_concept'].includes(candidate.type) &&
+    ['fill_blank',  'scenario', 'explain_concept'].includes(candidate.type) &&
     !('answer' in candidate) &&
     (!Array.isArray(candidate.acceptedAnswers) || candidate.acceptedAnswers.length === 0)
   ) {

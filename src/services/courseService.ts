@@ -114,8 +114,7 @@ function normalizeExercise(value: unknown): Exercise | null {
     'fill_blank',
     'matching',
     'ordering',
-    'short_answer',
-    'flashcard',
+        'flashcard',
     'scenario',
     'explain_concept'
   ];

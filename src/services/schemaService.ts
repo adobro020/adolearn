@@ -22,7 +22,6 @@ export const VALID_EXERCISE_TYPES: ExerciseType[] = [
   'fill_blank',
   'matching',
   'ordering',
-  'short_answer',
   'flashcard',
   'scenario',
   'explain_concept'

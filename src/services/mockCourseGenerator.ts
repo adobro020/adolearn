@@ -162,9 +162,9 @@ function createExerciseSet(
     concept
   };
 
-  const shortAnswerExercise: Exercise = {
+  const conceptCheckExercise: Exercise = {
     id: createId('exercise'),
-    type: 'short_answer',
+    type: 'explain_concept',
     prompt: `In one sentence, explain how ${concept.toLowerCase()} could help someone understand the pasted source material.`,
     answer: `${concept} helps organize the source material into a clearer learning path.`,
     acceptedAnswers: [
@@ -297,8 +297,8 @@ function createExerciseSet(
   ];
 
   const extensionSets: Exercise[][] = [
-    [flashcardExercise, shortAnswerExercise],
-    [matchingExercise, shortAnswerExercise],
+    [flashcardExercise, conceptCheckExercise],
+    [matchingExercise, conceptCheckExercise],
     [orderingExercise, flashcardExercise],
     [scenarioExercise, explainConceptExercise]
   ];
@@ -447,8 +447,7 @@ export function getExerciseTypeCounts(course: Course): Record<ExerciseType, numb
     'fill_blank',
     'matching',
     'ordering',
-    'short_answer',
-    'flashcard',
+        'flashcard',
     'scenario',
     'explain_concept'
   ];

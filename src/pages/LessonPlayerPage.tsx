@@ -358,6 +358,7 @@ export function LessonPlayerPage({
   const [textAnswer, setTextAnswer] = useState('');
   const [booleanAnswer, setBooleanAnswer] = useState<boolean | null>(null);
   const [matchingAnswers, setMatchingAnswers] = useState<Record<string, string>>({});
+  const [selectedMatchTermId, setSelectedMatchTermId] = useState<string | null>(null);
   const [orderedItemIds, setOrderedItemIds] = useState<string[]>([]);
   const [flashcardRevealed, setFlashcardRevealed] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
@@ -368,6 +369,7 @@ export function LessonPlayerPage({
 
   useEffect(() => {
     setMatchingAnswers({});
+    setSelectedMatchTermId(null);
     setOrderedItemIds(getInitialOrderingIds(currentExercise));
   }, [currentExercise?.id]);
 
@@ -418,7 +420,6 @@ export function LessonPlayerPage({
 
     if (
       currentExercise.type === 'fill_blank' ||
-      currentExercise.type === 'short_answer' ||
       currentExercise.type === 'explain_concept'
     ) {
       return textAnswer.trim().length > 0;
@@ -445,6 +446,7 @@ export function LessonPlayerPage({
     setTextAnswer('');
     setBooleanAnswer(null);
     setMatchingAnswers({});
+    setSelectedMatchTermId(null);
     setOrderedItemIds(getInitialOrderingIds(lesson?.exercises[currentExerciseIndex + 1] ?? null));
     setFlashcardRevealed(false);
     setFeedback(null);
@@ -489,13 +491,6 @@ export function LessonPlayerPage({
     if (currentExercise.type === 'fill_blank') {
       submittedAnswer = textAnswer;
       isCorrect = matchesExactAcceptedAnswer(textAnswer, currentExercise);
-    }
-
-    if (currentExercise.type === 'short_answer') {
-      submittedAnswer = textAnswer;
-      isCorrect =
-        matchesFlexibleAcceptedAnswer(textAnswer, currentExercise) ||
-        matchesKeywordAnswer(textAnswer, currentExercise);
     }
 
     if (currentExercise.type === 'matching') {
@@ -626,6 +621,25 @@ export function LessonPlayerPage({
     }));
   }
 
+  function handleMatchTermClick(pairId: string) {
+    if (feedback) {
+      return;
+    }
+
+    playClickSound();
+    setSelectedMatchTermId((currentPairId) => (currentPairId === pairId ? null : pairId));
+  }
+
+  function handleMatchDefinitionClick(definition: string) {
+    if (feedback || !selectedMatchTermId) {
+      return;
+    }
+
+    playClickSound();
+    updateMatchingAnswer(selectedMatchTermId, definition);
+    setSelectedMatchTermId(null);
+  }
+
   function moveOrderingItem(index: number, direction: 'up' | 'down') {
     setOrderedItemIds((previousIds) => {
       const nextIndex = direction === 'up' ? index - 1 : index + 1;
@@ -736,48 +750,78 @@ export function LessonPlayerPage({
       );
     }
 
-    if (exercise.type === 'short_answer') {
-      return renderTextResponseInput(
-        'Your short answer',
-        'Write one or two sentences',
-        'For now, short answers use accepted-answer and keyword matching. AI grading comes later.'
-      );
-    }
-
     if (exercise.type === 'matching') {
       const pairs = getMatchingPairs(exercise);
       const definitions = pairs.map((pair) => pair.right);
+      const usedDefinitions = new Set(Object.values(matchingAnswers));
 
       return (
         <div className="space-y-4">
           <div className="rounded-3xl bg-sky-50 p-4 text-sm font-bold leading-6 text-sky-900 ring-1 ring-sky-100">
-            Match each term to the definition that fits best.
+            Tap a term, then tap the matching definition. Matched definitions lock into place like a quick Duolingo-style pair game.
           </div>
-          <div className="grid gap-3">
-            {pairs.map((pair, index) => (
-              <label
-                key={pair.id}
-                className="rounded-3xl bg-white p-4 ring-2 ring-slate-200 sm:p-5"
-              >
-                <span className="block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                  Term {index + 1}
-                </span>
-                <span className="mt-1 block text-base font-black text-slate-950">{pair.left}</span>
-                <select
-                  value={matchingAnswers[pair.id] ?? ''}
-                  onChange={(event) => { playClickSound(); updateMatchingAnswer(pair.id, event.target.value); }}
-                  disabled={Boolean(feedback)}
-                  className="mt-3 w-full rounded-2xl border-0 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 ring-1 ring-slate-200 focus:ring-emerald-300"
-                >
-                  <option value="">Choose a definition</option>
-                  {definitions.map((definition) => (
-                    <option key={definition} value={definition}>
-                      {definition}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Terms</p>
+              {pairs.map((pair, index) => {
+                const selected = selectedMatchTermId === pair.id;
+                const matched = Boolean(matchingAnswers[pair.id]);
+
+                return (
+                  <button
+                    key={pair.id}
+                    type="button"
+                    onClick={() => handleMatchTermClick(pair.id)}
+                    disabled={Boolean(feedback)}
+                    className={classNames(
+                      'w-full rounded-3xl p-4 text-left ring-2 transition sm:p-5',
+                      selected && 'bg-emerald-50 text-emerald-900 ring-emerald-300 shadow-sm shadow-emerald-100',
+                      !selected && matched && 'bg-sky-50 text-sky-900 ring-sky-200',
+                      !selected && !matched && 'bg-white text-slate-800 ring-slate-200 hover:-translate-y-0.5 hover:ring-emerald-200',
+                      feedback && !matched && 'opacity-70'
+                    )}
+                  >
+                    <span className="block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                      Term {index + 1}
+                    </span>
+                    <span className="mt-1 block text-base font-black leading-6">{pair.left}</span>
+                    {matched ? (
+                      <span className="mt-3 block rounded-2xl bg-white/70 px-3 py-2 text-xs font-bold leading-5 text-slate-600 ring-1 ring-white/80">
+                        Matched to: {matchingAnswers[pair.id]}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Definitions</p>
+              {definitions.map((definition, index) => {
+                const used = usedDefinitions.has(definition);
+
+                return (
+                  <button
+                    key={definition}
+                    type="button"
+                    onClick={() => handleMatchDefinitionClick(definition)}
+                    disabled={Boolean(feedback) || !selectedMatchTermId || used}
+                    className={classNames(
+                      'w-full rounded-3xl p-4 text-left text-sm font-bold leading-6 ring-2 transition sm:p-5',
+                      used && 'bg-emerald-50 text-emerald-900 ring-emerald-200 opacity-80',
+                      !used && selectedMatchTermId && 'bg-white text-slate-800 ring-emerald-200 hover:-translate-y-0.5 hover:bg-emerald-50',
+                      !used && !selectedMatchTermId && 'bg-white text-slate-700 ring-slate-200'
+                    )}
+                  >
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                      Definition {index + 1}
+                    </span>
+                    {definition}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       );
