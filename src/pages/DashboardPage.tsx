@@ -198,6 +198,128 @@ function CourseCard({
   );
 }
 
+function NewUserFeatureCard({
+  title,
+  description,
+  imageSrc,
+  imageAlt
+}: {
+  title: string;
+  description: string;
+  imageSrc: string;
+  imageAlt: string;
+}) {
+  return (
+    <article className="group overflow-hidden rounded-[2rem] bg-white/90 p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/90 dark:bg-slate-950/90 dark:ring-slate-800">
+      <div className="rounded-[1.5rem] bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4 ring-1 ring-emerald-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 dark:ring-slate-800">
+        <img src={imageSrc} alt={imageAlt} className="mx-auto h-56 w-full object-contain transition duration-300 group-hover:scale-[1.02]" />
+      </div>
+      <h3 className="mt-5 text-xl font-black tracking-tight text-slate-950 dark:text-white">{title}</h3>
+      <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+    </article>
+  );
+}
+
+function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPageProps, 'onCreateCourse' | 'onOpenSettings'>) {
+  return (
+    <div className="space-y-8">
+      <section className="relative overflow-hidden rounded-[2.5rem] bg-white/95 p-6 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 sm:p-8 lg:p-10 dark:bg-slate-950/95 dark:ring-slate-800">
+        <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl dark:bg-emerald-400/10" aria-hidden="true" />
+        <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-sky-200/50 blur-3xl dark:bg-sky-400/10" aria-hidden="true" />
+
+        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-center">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">Welcome to AdoStudy</p>
+            <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-[-0.055em] text-slate-950 sm:text-6xl dark:text-white">
+              Turn your material into a polished learning experience.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 sm:text-lg dark:text-slate-300">
+              AdoStudy helps new learners convert notes, uploads, transcripts, articles, and study guides into organized sections, focused lessons, and interactive practice.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={onCreateCourse}
+                className="rounded-2xl bg-slate-950 px-6 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-emerald-400 dark:text-slate-950"
+              >
+                Create your first course
+              </button>
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="rounded-2xl bg-white px-6 py-4 text-sm font-black text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700"
+              >
+                Configure AI settings
+              </button>
+            </div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                <p className="text-2xl font-black text-slate-950 dark:text-white">01</p>
+                <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Upload or paste</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                <p className="text-2xl font-black text-slate-950 dark:text-white">02</p>
+                <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Generate a path</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                <p className="text-2xl font-black text-slate-950 dark:text-white">03</p>
+                <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Practice daily</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -inset-5 rounded-[3rem] bg-gradient-to-br from-emerald-200/40 to-sky-200/40 blur-2xl dark:from-emerald-400/10 dark:to-sky-400/10" aria-hidden="true" />
+            <div className="relative rounded-[2.25rem] bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-5 ring-1 ring-emerald-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 dark:ring-slate-800">
+              <img src={ROBOT_GRAPHICS.workflow} alt="AdoStudy robot organizing learning cards" className="mx-auto h-[28rem] w-full object-contain" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-5 lg:grid-cols-3">
+        <NewUserFeatureCard
+          title="Organized from the start"
+          description="Your source material becomes clear sections, units, and bite-sized lessons so learners know exactly where to begin."
+          imageSrc={ROBOT_GRAPHICS.teacher}
+          imageAlt="Robot teaching at a whiteboard"
+        />
+        <NewUserFeatureCard
+          title="Practice that sticks"
+          description="AdoStudy adds recall, matching, ordering, flashcards, and review prompts to help ideas become long-term knowledge."
+          imageSrc={ROBOT_GRAPHICS.audio}
+          imageAlt="Robot reviewing study notes"
+        />
+        <NewUserFeatureCard
+          title="Progress saved locally"
+          description="Courses, progress, review items, streaks, and XP are saved in this browser so the dashboard changes as you learn."
+          imageSrc={ROBOT_GRAPHICS.celebration}
+          imageAlt="Robot celebrating learning progress"
+        />
+      </section>
+
+      <section className="overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/20 sm:p-8 dark:bg-slate-900">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-300">Zero courses detected</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Create a course to unlock your dashboard.</h2>
+            <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-300">
+              This homepage appears only while local storage has no saved courses. Once you generate your first course, AdoLearn automatically switches to your normal dashboard with stats, reviews, and saved paths.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCreateCourse}
+            className="rounded-2xl bg-emerald-400 px-6 py-4 text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:bg-emerald-300"
+          >
+            Start building
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function DashboardPage({
   onCreateCourse,
   onOpenCourse,
@@ -234,6 +356,18 @@ export function DashboardPage({
   const continueCourse = getMostRecentCourse(coursesWithProgress);
   const reviewSummary = useMemo(() => getReviewSummary(), [courses, stats]);
   const weakConceptPreview = reviewSummary.weakConcepts.slice(0, 3);
+  const hasSavedCourses = courses.length > 0;
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        'adolearn_dashboard_variant',
+        hasSavedCourses ? 'existing_user' : 'new_user'
+      );
+    } catch {
+      // Dashboard mode still derives from saved courses if localStorage metadata cannot be written.
+    }
+  }, [hasSavedCourses]);
 
   function handleDeleteCourse(course: Course) {
     const confirmed = window.confirm(
@@ -262,6 +396,10 @@ export function DashboardPage({
         <SkeletonBlock lines={5} />
       </div>
     );
+  }
+
+  if (!hasSavedCourses) {
+    return <NewUserDashboard onCreateCourse={onCreateCourse} onOpenSettings={onOpenSettings} />;
   }
 
   return (
