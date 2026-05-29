@@ -73,7 +73,9 @@ function validateStringField(
   }
 
   if (!isNonEmptyString(record[key])) {
-    errors.push(`${path}.${key} must be a non-empty string.`);
+    if (!options.allowNormalizerRepair || !repairable) {
+      errors.push(`${path}.${key} must be a non-empty string.`);
+    }
   }
 }
 
@@ -132,14 +134,14 @@ function validateExercise(
     return;
   }
 
-  const repairableExerciseFields = new Set(['id', 'acceptedAnswers', 'hint']);
+  const repairableExerciseFields = new Set(['id', 'acceptedAnswers', 'hint', 'explanation']);
   EXERCISE_REQUIRED_FIELDS.forEach((field) =>
     hasRequiredField(candidate, field, path, errors, options, repairableExerciseFields)
   );
 
   validateStringField(candidate, 'id', path, errors, options, true);
   validateStringField(candidate, 'prompt', path, errors, options);
-  validateStringField(candidate, 'explanation', path, errors, options);
+  validateStringField(candidate, 'explanation', path, errors, options, true);
 
   if (!isNonEmptyString(candidate.type)) {
     errors.push(`${path}.type must be one of: ${VALID_EXERCISE_TYPES.join(', ')}.`);
