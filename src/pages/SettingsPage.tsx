@@ -295,7 +295,7 @@ export function SettingsPage() {
       <PageCard
         eyebrow="Settings"
         title="Control AdoLearn locally"
-        description="AdoLearn is Production-ready. Settings, courses, progress, review history, and imports stay in this browser through browser storage."
+        description="Choose how AdoLearn generates courses, looks, and manages saved data on this device."
       >
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100">
@@ -381,7 +381,7 @@ export function SettingsPage() {
       <PageCard
         eyebrow="Appearance"
         title="Theme preference"
-        description="Choose how AdoLearn should remember your preferred appearance. Full dark-mode styling can be expanded in a later phase."
+        description="Choose how AdoLearn should remember your preferred appearance."
       >
         <div className="grid gap-3 sm:grid-cols-3">
           {themes.map((theme) => {

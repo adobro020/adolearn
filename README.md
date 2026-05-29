@@ -238,7 +238,7 @@ Recommended setup:
 - Add the `www` domain, such as `www.yourdomain.com`, if you want it to work too.
 - Choose your preferred canonical domain in the hosting platform if prompted.
 - For Namecheap, follow the DNS records your host shows for your project and domain.
-- DNS should point to the hosting platform, not GitHub Pages.
+- DNS should point to your current hosting platform, not an old deployment target.
 - The final app should load from `https://yourdomain.com/` or your chosen canonical domain.
 - Do not use `/adolearn/` unless you intentionally deploy under a subpath.
 

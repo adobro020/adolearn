@@ -1,7 +1,3 @@
-import { buildCourseGenerationPrompt } from '../src/services/aiPromptService';
-import { getAdoLearnCourseResponseJSONSchema } from '../src/services/schemaService';
-import type { CourseStyle, Difficulty, LessonLength } from '../src/types/settings';
-
 type ApiRequest = {
   method?: string;
   body?: unknown;
@@ -14,6 +10,10 @@ type ApiResponse = {
   setHeader?: (name: string, value: string) => void;
 };
 
+type Difficulty = 'Auto' | 'Beginner' | 'Intermediate' | 'Advanced';
+type CourseStyle = 'Exam prep' | 'Quick overview' | 'Deep learning' | 'Flashcard-heavy';
+type LessonLength = 'Short' | 'Medium' | 'Long';
+
 interface GenerateCourseRequestBody {
   sourceMaterial?: unknown;
   optionalTitle?: unknown;
@@ -23,19 +23,19 @@ interface GenerateCourseRequestBody {
   modelName?: unknown;
 }
 
-interface OpenAIResponsesAPIContentPart {
+interface OpenAIContentPart {
   type?: string;
   text?: string;
 }
 
-interface OpenAIResponsesAPIOutputItem {
+interface OpenAIOutputItem {
   type?: string;
-  content?: OpenAIResponsesAPIContentPart[];
+  content?: OpenAIContentPart[];
 }
 
-interface OpenAIResponsesAPIResponse {
+interface OpenAIResponsePayload {
   output_text?: string;
-  output?: OpenAIResponsesAPIOutputItem[];
+  output?: OpenAIOutputItem[];
   error?: {
     message?: string;
     type?: string;
@@ -52,8 +52,138 @@ const DEFAULT_DIFFICULTY: Difficulty = 'Auto';
 const DEFAULT_COURSE_STYLE: CourseStyle = 'Quick overview';
 const DEFAULT_LESSON_LENGTH: LessonLength = 'Medium';
 
+const COURSE_SCHEMA = {
+  type: 'object',
+  additionalProperties: true,
+  required: [
+    'title',
+    'description',
+    'difficulty',
+    'style',
+    'estimatedTotalMinutes',
+    'sections',
+    'keyConcepts'
+  ],
+  properties: {
+    title: { type: 'string' },
+    description: { type: 'string' },
+    sourceMaterialPreview: { type: 'string' },
+    difficulty: { type: 'string' },
+    style: { type: 'string' },
+    estimatedTotalMinutes: { type: 'number' },
+    keyConcepts: { type: 'array', items: { type: 'string' } },
+    sections: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: true,
+        required: ['title', 'description', 'units'],
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          units: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              required: ['title', 'description', 'lessons'],
+              properties: {
+                title: { type: 'string' },
+                description: { type: 'string' },
+                lessons: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    additionalProperties: true,
+                    required: [
+                      'title',
+                      'type',
+                      'estimatedMinutes',
+                      'learningObjectives',
+                      'summary',
+                      'exercises'
+                    ],
+                    properties: {
+                      title: { type: 'string' },
+                      type: { type: 'string', enum: ['standard', 'review', 'final_challenge'] },
+                      estimatedMinutes: { type: 'number' },
+                      learningObjectives: { type: 'array', items: { type: 'string' } },
+                      summary: { type: 'string' },
+                      exercises: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          additionalProperties: true,
+                          required: ['type', 'prompt', 'explanation'],
+                          properties: {
+                            type: {
+                              type: 'string',
+                              enum: [
+                                'multiple_choice',
+                                'true_false',
+                                'fill_blank',
+                                'matching',
+                                'ordering',
+                                'short_answer',
+                                'flashcard',
+                                'scenario',
+                                'explain_concept'
+                              ]
+                            },
+                            prompt: { type: 'string' },
+                            choices: {
+                              type: 'array',
+                              items: {
+                                type: 'object',
+                                additionalProperties: true,
+                                properties: {
+                                  id: { type: 'string' },
+                                  text: { type: 'string' },
+                                  isCorrect: { type: 'boolean' }
+                                }
+                              }
+                            },
+                            answer: { type: ['string', 'boolean', 'number'] },
+                            acceptedAnswers: { type: 'array', items: { type: 'string' } },
+                            explanation: { type: 'string' },
+                            hint: { type: 'string' },
+                            sourceReference: { type: 'string' },
+                            pairs: {
+                              type: 'array',
+                              items: {
+                                type: 'object',
+                                additionalProperties: true,
+                                properties: {
+                                  left: { type: 'string' },
+                                  right: { type: 'string' }
+                                }
+                              }
+                            },
+                            items: { type: 'array', items: { type: 'string' } },
+                            correctOrder: { type: 'array', items: { type: 'string' } },
+                            concept: { type: 'string' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} as const;
+
+function sendJSON(response: ApiResponse, status: number, body: unknown): void {
+  response.setHeader?.('Cache-Control', 'no-store');
+  response.status(status).json(body);
+}
+
 function sendError(response: ApiResponse, status: number, code: string, message: string): void {
-  response.status(status).json({
+  sendJSON(response, status, {
     ok: false,
     code,
     error: message
@@ -99,9 +229,13 @@ function getLessonLength(value: unknown): LessonLength {
     : DEFAULT_LESSON_LENGTH;
 }
 
+function byteLength(value: string): number {
+  return Buffer.byteLength(value, 'utf8');
+}
+
 function getRequestByteSize(value: unknown): number {
   try {
-    return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+    return byteLength(JSON.stringify(value));
   } catch {
     return MAX_REQUEST_BYTES + 1;
   }
@@ -110,7 +244,7 @@ function getRequestByteSize(value: unknown): number {
 async function readRequestBody(request: ApiRequest): Promise<unknown> {
   if (request.body !== undefined) {
     if (typeof request.body === 'string') {
-      if (new TextEncoder().encode(request.body).byteLength > MAX_REQUEST_BYTES) {
+      if (byteLength(request.body) > MAX_REQUEST_BYTES) {
         throw new Error('request_too_large');
       }
 
@@ -130,13 +264,19 @@ async function readRequestBody(request: ApiRequest): Promise<unknown> {
 
   return new Promise((resolve, reject) => {
     let rawBody = '';
-    let byteLength = 0;
+    let totalBytes = 0;
+    let rejected = false;
 
     request.on?.('data', (chunk) => {
-      const textChunk = typeof chunk === 'string' ? chunk : Buffer.from(chunk as ArrayBuffer).toString('utf8');
-      byteLength += Buffer.byteLength(textChunk);
+      if (rejected) {
+        return;
+      }
 
-      if (byteLength > MAX_REQUEST_BYTES) {
+      const textChunk = typeof chunk === 'string' ? chunk : Buffer.from(chunk as ArrayBuffer).toString('utf8');
+      totalBytes += byteLength(textChunk);
+
+      if (totalBytes > MAX_REQUEST_BYTES) {
+        rejected = true;
         reject(new Error('request_too_large'));
         return;
       }
@@ -145,6 +285,10 @@ async function readRequestBody(request: ApiRequest): Promise<unknown> {
     });
 
     request.on?.('end', () => {
+      if (rejected) {
+        return;
+      }
+
       if (!rawBody.trim()) {
         resolve(null);
         return;
@@ -157,11 +301,101 @@ async function readRequestBody(request: ApiRequest): Promise<unknown> {
       }
     });
 
-    request.on?.('error', () => reject(new Error('read_error')));
+    request.on?.('error', () => {
+      if (!rejected) {
+        reject(new Error('read_error'));
+      }
+    });
   });
 }
 
-function extractResponseText(payload: OpenAIResponsesAPIResponse): string {
+function buildCourseGenerationPrompt(
+  sourceMaterial: string,
+  options: {
+    optionalTitle?: string;
+    difficulty: Difficulty;
+    courseStyle: CourseStyle;
+    lessonLength: LessonLength;
+  }
+): string {
+  const titleInstruction = options.optionalTitle
+    ? `Use this course title unless it clearly conflicts with the material: ${options.optionalTitle}`
+    : 'Create a concise course title based only on the provided material.';
+
+  return `You are an expert instructional designer. Transform the provided source material into an AdoLearn course: a short, interactive, Duolingo-style learning path.
+
+Critical rules:
+- Use only the provided source material.
+- Do not invent unsupported facts.
+- Return valid JSON only. No markdown, comments, or extra prose.
+- Keep lessons short, interactive, and focused.
+- Include sections, units, lessons, exercises, explanations, hints, learning objectives, key concepts, review lessons, and final challenges.
+- Prefer 2 sections, each with 2 units, each unit with 2 to 3 lessons.
+- Include at least one review lesson and one final_challenge lesson.
+- Include 5 exercises per lesson when possible.
+- Exercise types may include multiple_choice, true_false, fill_blank, matching, ordering, short_answer, flashcard, scenario, and explain_concept.
+
+Course settings:
+- ${titleInstruction}
+- Difficulty: ${options.difficulty}
+- Course style: ${options.courseStyle}
+- Lesson length: ${options.lessonLength}
+
+Return one JSON object matching this shape:
+{
+  "title": "string",
+  "description": "string",
+  "sourceMaterialPreview": "string",
+  "difficulty": "Auto | Beginner | Intermediate | Advanced",
+  "style": "Exam prep | Quick overview | Deep learning | Flashcard-heavy",
+  "estimatedTotalMinutes": 60,
+  "keyConcepts": ["string"],
+  "sections": [
+    {
+      "title": "string",
+      "description": "string",
+      "units": [
+        {
+          "title": "string",
+          "description": "string",
+          "lessons": [
+            {
+              "title": "string",
+              "type": "standard | review | final_challenge",
+              "estimatedMinutes": 5,
+              "learningObjectives": ["string"],
+              "summary": "string",
+              "exercises": [
+                {
+                  "type": "multiple_choice",
+                  "prompt": "string",
+                  "choices": [
+                    { "id": "a", "text": "string", "isCorrect": true },
+                    { "id": "b", "text": "string", "isCorrect": false }
+                  ],
+                  "answer": "string",
+                  "acceptedAnswers": ["string"],
+                  "explanation": "string",
+                  "hint": "string",
+                  "sourceReference": "string",
+                  "concept": "string"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Source material:
+"""
+${sourceMaterial}
+"""`;
+}
+
+function extractResponseText(payload: OpenAIResponsePayload): string {
   if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim();
   }
@@ -210,51 +444,56 @@ function parseGeneratedCourse(rawResponseText: string): unknown {
 }
 
 async function callOpenAI(prompt: string, modelName: string, apiKey: string): Promise<unknown> {
-  const openAIResponse = await fetch(OPENAI_RESPONSES_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: modelName,
-      input: [
-        {
-          role: 'system',
-          content: [
-            {
-              type: 'input_text',
-              text: 'You generate AdoLearn course JSON. Return exactly one valid JSON object and no markdown.'
-            }
-          ]
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text: prompt
-            }
-          ]
-        }
-      ],
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'adolearn_course',
-          description: 'A complete AdoLearn Course object.',
-          schema: getAdoLearnCourseResponseJSONSchema(),
-          strict: false
-        }
-      },
-      store: false
-    })
-  });
-
-  let payload: OpenAIResponsesAPIResponse | null = null;
+  let openAIResponse: Response;
 
   try {
-    payload = (await openAIResponse.json()) as OpenAIResponsesAPIResponse;
+    openAIResponse = await fetch(OPENAI_RESPONSES_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelName,
+        input: [
+          {
+            role: 'system',
+            content: [
+              {
+                type: 'input_text',
+                text: 'You generate AdoLearn course JSON. Return exactly one valid JSON object and no markdown.'
+              }
+            ]
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text: prompt
+              }
+            ]
+          }
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'adolearn_course',
+            schema: COURSE_SCHEMA,
+            strict: false
+          }
+        },
+        store: false
+      })
+    });
+  } catch {
+    throw new Error('network_error');
+  }
+
+  let payload: OpenAIResponsePayload | null = null;
+
+  try {
+    payload = (await openAIResponse.json()) as OpenAIResponsePayload;
   } catch {
     payload = null;
   }
@@ -263,8 +502,7 @@ async function callOpenAI(prompt: string, modelName: string, apiKey: string): Pr
     const rateLimited = openAIResponse.status === 429 || payload?.error?.code === 'rate_limit_exceeded';
     const unavailable = openAIResponse.status >= 500;
 
-    const error = new Error(rateLimited ? 'rate_limit' : unavailable ? 'openai_unavailable' : 'openai_error');
-    throw error;
+    throw new Error(rateLimited ? 'rate_limit' : unavailable ? 'openai_unavailable' : 'openai_error');
   }
 
   if (payload?.error) {
@@ -284,9 +522,7 @@ async function callOpenAI(prompt: string, modelName: string, apiKey: string): Pr
   }
 }
 
-export default async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
-  response.setHeader?.('Cache-Control', 'no-store');
-
+async function handleGenerateCourse(request: ApiRequest, response: ApiResponse): Promise<void> {
   if (request.method !== 'POST') {
     sendError(response, 405, 'method_not_allowed', 'This endpoint only accepts POST requests.');
     return;
@@ -347,7 +583,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
 
   try {
     const course = await callOpenAI(prompt, getAllowedModel(requestBody.modelName), apiKey);
-    response.status(200).json({ ok: true, course });
+    sendJSON(response, 200, { ok: true, course });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'unknown_error';
 
@@ -361,11 +597,19 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       return;
     }
 
-    if (code === 'openai_unavailable') {
+    if (code === 'openai_unavailable' || code === 'network_error') {
       sendError(response, 503, 'ai_unavailable', 'AI generation is temporarily unavailable.');
       return;
     }
 
     sendError(response, 502, 'ai_generation_failed', 'Generation failed. Please try again.');
+  }
+}
+
+export default async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
+  try {
+    await handleGenerateCourse(request, response);
+  } catch {
+    sendError(response, 503, 'ai_unavailable', 'AI generation is temporarily unavailable.');
   }
 }

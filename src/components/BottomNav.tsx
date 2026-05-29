@@ -10,7 +10,7 @@ interface BottomNavProps {
 export function BottomNav({ activePage, onPageChange }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-3 bottom-3 z-20 rounded-3xl bg-slate-950/90 p-2 shadow-2xl shadow-slate-900/25 backdrop-blur md:sticky md:bottom-auto md:mx-auto md:mt-6 md:max-w-xl md:bg-white/80 md:ring-1 md:ring-slate-200"
+      className="fixed inset-x-3 bottom-3 z-20 rounded-3xl bg-slate-950/90 p-2 shadow-2xl shadow-slate-900/25 backdrop-blur md:sticky md:bottom-auto md:mx-auto md:mt-6 md:max-w-xl md:bg-black md:ring-1 md:ring-zinc-800"
       aria-label="Primary navigation"
     >
       <div className="grid grid-cols-3 gap-2">
@@ -25,8 +25,8 @@ export function BottomNav({ activePage, onPageChange }: BottomNavProps) {
               className={classNames(
                 'flex min-h-14 flex-col items-center justify-center rounded-2xl px-3 py-2 text-xs font-extrabold transition md:min-h-12 md:flex-row md:gap-2 md:text-sm',
                 isActive
-                  ? 'bg-white text-emerald-700 shadow-sm md:bg-emerald-600 md:text-white'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white md:text-slate-500 md:hover:bg-slate-100 md:hover:text-slate-900'
+                  ? 'bg-emerald-500 text-black shadow-sm shadow-emerald-500/20 md:bg-emerald-500 md:text-black dark:bg-emerald-400 dark:text-black'
+                  : 'text-slate-300 hover:bg-white/10 hover:text-white md:text-slate-400 md:hover:bg-zinc-900 md:hover:text-white'
               )}
               aria-current={isActive ? 'page' : undefined}
             >

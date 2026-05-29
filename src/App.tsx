@@ -148,7 +148,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#d1fae5,_transparent_34rem),linear-gradient(180deg,_#f8fafc,_#eef2ff)] text-slate-950 transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_34rem),linear-gradient(180deg,_#020617,_#0f172a)] dark:text-slate-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#d1fae5,_transparent_34rem),linear-gradient(180deg,_#f8fafc,_#eef2ff)] text-slate-950 transition-colors duration-300 dark:bg-black dark:text-slate-100">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 pb-28 md:px-6 md:py-6">
         <Header />
         <BottomNav activePage={activePage} onPageChange={setActivePage} />

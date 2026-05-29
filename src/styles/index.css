@@ -239,3 +239,215 @@ summary:focus-visible {
 .dark [role="progressbar"] .bg-white {
   background-color: #020617 !important;
 }
+
+/* OLED dark theme refinement: true black surfaces with high-contrast borders. */
+html.dark,
+html.dark body,
+html.dark #root {
+  background: #000 !important;
+  color: #f8fafc;
+}
+
+.dark .min-h-screen,
+.dark main,
+.dark header,
+.dark section {
+  background: #000 !important;
+  background-image: none !important;
+}
+
+.dark .from-slate-50,
+.dark .from-emerald-50,
+.dark .from-amber-50,
+.dark .from-orange-50,
+.dark .from-sky-50,
+.dark .from-rose-50,
+.dark .from-violet-50,
+.dark .to-white,
+.dark .to-sky-50,
+.dark .to-orange-50,
+.dark .to-rose-50 {
+  background-color: #000 !important;
+  background-image: none !important;
+}
+
+.dark .bg-white,
+.dark .bg-white\/80,
+.dark .bg-white\/85,
+.dark .bg-white\/90,
+.dark .bg-white\/95,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-slate-200,
+.dark .bg-emerald-50,
+.dark .bg-emerald-100,
+.dark .bg-sky-50,
+.dark .bg-sky-100,
+.dark .bg-amber-50,
+.dark .bg-amber-100,
+.dark .bg-orange-50,
+.dark .bg-orange-100,
+.dark .bg-rose-50,
+.dark .bg-rose-100,
+.dark .bg-violet-50,
+.dark .bg-violet-100 {
+  background-color: #000 !important;
+  background-image: none !important;
+}
+
+.dark .bg-slate-950,
+.dark .bg-slate-900,
+.dark .bg-slate-800,
+.dark .bg-zinc-950,
+.dark .bg-zinc-900 {
+  background-color: #000 !important;
+}
+
+.dark .ring-slate-50,
+.dark .ring-slate-100,
+.dark .ring-slate-200,
+.dark .ring-slate-300,
+.dark .ring-white,
+.dark .ring-white\/15,
+.dark .ring-white\/70,
+.dark .ring-emerald-100,
+.dark .ring-emerald-200,
+.dark .ring-sky-100,
+.dark .ring-sky-200,
+.dark .ring-amber-100,
+.dark .ring-amber-200,
+.dark .ring-orange-100,
+.dark .ring-orange-200,
+.dark .ring-rose-100,
+.dark .ring-rose-200,
+.dark .ring-violet-100,
+.dark .ring-violet-200,
+.dark .border-slate-50,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-emerald-100,
+.dark .border-emerald-200,
+.dark .border-sky-100,
+.dark .border-sky-200,
+.dark .border-amber-100,
+.dark .border-amber-200,
+.dark .border-rose-100,
+.dark .border-rose-200 {
+  border-color: #27272a !important;
+  --tw-ring-color: #27272a !important;
+}
+
+.dark .shadow-sm,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl,
+.dark .shadow-slate-200,
+.dark .shadow-slate-200\/70,
+.dark .shadow-slate-200\/80,
+.dark .shadow-emerald-100,
+.dark .shadow-emerald-200,
+.dark .shadow-amber-200,
+.dark .shadow-slate-900\/10,
+.dark .shadow-slate-900\/25 {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+  box-shadow: none !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #000 !important;
+  color: #f8fafc !important;
+  border-color: #3f3f46 !important;
+  --tw-ring-color: #3f3f46 !important;
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  background-color: #000 !important;
+  --tw-ring-color: #34d399 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #71717a !important;
+}
+
+.dark option {
+  background-color: #000;
+  color: #f8fafc;
+}
+
+.dark .text-slate-950,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-amber-950,
+.dark .text-sky-950,
+.dark .text-emerald-950,
+.dark .text-rose-950 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-emerald-900,
+.dark .text-emerald-800,
+.dark .text-emerald-700,
+.dark .text-emerald-600 {
+  color: #34d399 !important;
+}
+
+.dark .text-sky-900,
+.dark .text-sky-800,
+.dark .text-sky-700,
+.dark .text-sky-600 {
+  color: #7dd3fc !important;
+}
+
+.dark .text-amber-900,
+.dark .text-amber-800,
+.dark .text-amber-700,
+.dark .text-amber-600 {
+  color: #fbbf24 !important;
+}
+
+.dark .text-rose-900,
+.dark .text-rose-800,
+.dark .text-rose-700,
+.dark .text-rose-600 {
+  color: #fb7185 !important;
+}
+
+.dark button:not([disabled]):hover,
+.dark a:not([aria-disabled='true']):hover,
+.dark label.cursor-pointer:hover {
+  filter: brightness(1.08);
+}
+
+.dark [role='progressbar'] > div:first-child,
+.dark .rounded-full.bg-slate-100 {
+  background-color: #18181b !important;
+}
+
+.dark [role='progressbar'] .bg-white,
+.dark .shadow-inner .bg-white {
+  background-color: #000 !important;
+}
+
+.dark .border-dashed {
+  border-color: #3f3f46 !important;
+}
+
+.dark .backdrop-blur,
+.dark .backdrop-blur-sm,
+.dark .backdrop-blur-md {
+  background-color: #000 !important;
+}
