@@ -5,7 +5,6 @@ import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
 import { generateCourseWithAI, AICourseGenerationError } from '../services/aiCourseGenerationService';
 import { saveCourse } from '../services/courseService';
 import { generateMockCourse } from '../services/mockCourseGenerator';
-import { playLessonCompleteSound } from '../services/soundService';
 import { initializeCourseProgress } from '../services/progressService';
 import { getSettings } from '../services/settingsService';
 import { isStorageAvailable } from '../services/storageService';
@@ -130,112 +129,6 @@ function getGenerationModeLabel(settings: AppSettings): string {
   }
 
   return 'Mock';
-}
-
-
-function CourseGenerationLoadingScreen({
-  activeStepIndex,
-  isSuccess,
-  generationModeLabel,
-  courseTitle
-}: {
-  activeStepIndex: number;
-  isSuccess: boolean;
-  generationModeLabel: string;
-  courseTitle: string;
-}) {
-  const visibleStepIndex = Math.min(Math.max(activeStepIndex, 0), GENERATION_STEPS.length - 1);
-  const progressValue = isSuccess
-    ? 100
-    : Math.max(8, Math.round(((visibleStepIndex + 1) / GENERATION_STEPS.length) * 100));
-  const activeStep = GENERATION_STEPS[visibleStepIndex];
-
-  return (
-    <section
-      className="relative isolate mx-auto flex min-h-[78vh] w-full max-w-4xl items-center justify-center overflow-hidden rounded-[2.5rem] bg-white p-5 shadow-xl shadow-emerald-200/40 ring-1 ring-emerald-100 sm:p-8 dark:bg-black dark:shadow-none dark:ring-zinc-700/90"
-      aria-live="polite"
-      aria-busy={!isSuccess}
-    >
-      <div className="absolute -left-16 top-10 h-44 w-44 rounded-full bg-emerald-200/70 blur-3xl dark:bg-emerald-500/10" />
-      <div className="absolute -right-20 bottom-10 h-52 w-52 rounded-full bg-sky-200/70 blur-3xl dark:bg-sky-500/10" />
-      <div className="absolute inset-x-8 top-8 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent dark:via-emerald-500/40" />
-
-      <div className="relative w-full max-w-2xl text-center">
-        <div className="mx-auto grid h-24 w-24 place-items-center rounded-[2rem] bg-emerald-500 text-5xl shadow-2xl shadow-emerald-400/30 ring-4 ring-white motion-safe:animate-bounce-soft dark:bg-emerald-400 dark:text-black dark:ring-zinc-800">
-          {isSuccess ? '🎉' : '🧠'}
-        </div>
-
-        <p className="mt-6 text-xs font-black uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-300">
-          {generationModeLabel} generation
-        </p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl dark:text-white">
-          {isSuccess ? 'Course ready!' : 'Building your learning path'}
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-slate-600 sm:text-base dark:text-zinc-300">
-          {isSuccess
-            ? `${courseTitle.trim() || 'Your new course'} is saved. Opening the course map now…`
-            : `${activeStep.label}. Keep this tab open while AdoLearn turns your material into bite-sized lessons.`}
-        </p>
-
-        <div className="mt-8 rounded-[2rem] bg-slate-50 p-4 text-left ring-1 ring-slate-200 dark:bg-black dark:ring-zinc-700/90 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-black text-slate-950 dark:text-white">
-                {isSuccess ? 'Saving complete' : activeStep.label}
-              </p>
-              <p className="mt-1 text-xs font-bold text-slate-500 dark:text-zinc-400">
-                Step {Math.min(visibleStepIndex + 1, GENERATION_STEPS.length)} of {GENERATION_STEPS.length}
-              </p>
-            </div>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/40">
-              {progressValue}%
-            </span>
-          </div>
-
-          <ProgressBar value={progressValue} label="Course generation progress" tone={isSuccess ? 'emerald' : 'sky'} size="lg" />
-
-          <ol className="mt-5 grid gap-3 sm:grid-cols-2">
-            {GENERATION_STEPS.map((step, index) => {
-              const stepState = getStepState(index, activeStepIndex, isSuccess);
-              const isActive = index === activeStepIndex && !isSuccess;
-
-              return (
-                <li
-                  key={step.label}
-                  className={classNames(
-                    'flex items-start gap-3 rounded-2xl p-3 text-left ring-1 transition',
-                    isActive
-                      ? 'bg-white ring-emerald-200 shadow-sm motion-safe:animate-pop-in dark:bg-zinc-950 dark:ring-emerald-400/50'
-                      : 'bg-white/70 ring-slate-100 dark:bg-black dark:ring-zinc-800'
-                  )}
-                >
-                  <span
-                    className={classNames(
-                      'grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black',
-                      stepState.className
-                    )}
-                    aria-label={stepState.label}
-                  >
-                    {stepState.symbol}
-                  </span>
-                  <span>
-                    <span className="block text-sm font-black text-slate-950 dark:text-white">{step.label}</span>
-                    <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500 dark:text-zinc-400">
-                      {step.detail}
-                    </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-
-        <p className="mt-5 text-xs font-bold text-slate-500 dark:text-zinc-500">
-          You’ll be taken to the course map automatically when everything is ready.
-        </p>
-      </div>
-    </section>
-  );
 }
 
 function getCourseByteSize(course: Course): number {
@@ -385,7 +278,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       }
 
       initializeCourseProgress(generatedCourse);
-      playLessonCompleteSound();
       setSuccessMessage('Course generated and saved locally! Opening the course map...');
       setActiveStepIndex(GENERATION_STEPS.length);
       await sleep(650);
@@ -396,17 +288,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     } finally {
       setIsGenerating(false);
     }
-  }
-
-  if (isGenerating || successMessage) {
-    return (
-      <CourseGenerationLoadingScreen
-        activeStepIndex={activeStepIndex}
-        isSuccess={Boolean(successMessage)}
-        generationModeLabel={generationModeLabel}
-        courseTitle={courseTitle}
-      />
-    );
   }
 
   return (
@@ -570,6 +451,43 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           </div>
         </form>
       </PageCard>
+
+      {(isGenerating || successMessage) && (
+        <section className="rounded-[2rem] bg-white p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 sm:p-7" aria-live="polite" aria-busy={isGenerating}>
+          <div className="mb-5">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600">
+              {generationModeLabel} generation
+            </p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+              Turning your material into a course
+            </h2>
+          </div>
+
+          <ol className="space-y-3">
+            {GENERATION_STEPS.map((step, index) => {
+              const stepState = getStepState(index, activeStepIndex, Boolean(successMessage));
+
+              return (
+                <li
+                  key={step.label}
+                  className={classNames("flex gap-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 transition", index === activeStepIndex && isGenerating ? "bg-gradient-to-r from-slate-50 via-white to-slate-50 motion-safe:animate-shimmer" : "")}
+                >
+                  <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${stepState.className}`}
+                    aria-label={stepState.label}
+                  >
+                    {stepState.symbol}
+                  </div>
+                  <div>
+                    <p className="font-black text-slate-950">{step.label}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">{step.detail}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
     </div>
   );
 }
