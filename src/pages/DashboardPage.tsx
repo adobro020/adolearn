@@ -229,12 +229,12 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
 
         <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-center">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">Welcome to AdoStudy</p>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">Welcome to AdoLearn</p>
             <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-[-0.055em] text-slate-950 sm:text-6xl dark:text-white">
               Turn your material into a polished learning experience.
             </h1>
             <p className="mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 sm:text-lg dark:text-slate-300">
-              AdoStudy helps new learners convert notes, uploads, transcripts, articles, and study guides into organized sections, focused lessons, and interactive practice.
+              AdoLearn helps new learners convert notes, uploads, transcripts, articles, and study guides into organized sections, focused lessons, and interactive practice.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
@@ -271,7 +271,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
           <div className="relative">
             <div className="absolute -inset-5 rounded-[3rem] bg-gradient-to-br from-emerald-200/40 to-sky-200/40 blur-2xl dark:from-emerald-400/10 dark:to-sky-400/10" aria-hidden="true" />
             <div className="relative rounded-[2.25rem] bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-5 ring-1 ring-emerald-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 dark:ring-slate-800">
-              <img src={ROBOT_GRAPHICS.workflow} alt="AdoStudy robot organizing learning cards" className="mx-auto h-[28rem] w-full object-contain" />
+              <img src={ROBOT_GRAPHICS.workflow} alt="AdoLearn robot organizing learning cards" className="mx-auto h-[28rem] w-full object-contain" />
             </div>
           </div>
         </div>
@@ -286,7 +286,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
         />
         <NewUserFeatureCard
           title="Practice that sticks"
-          description="AdoStudy adds recall, matching, ordering, flashcards, and review prompts to help ideas become long-term knowledge."
+          description="AdoLearn adds recall, matching, ordering, flashcards, and review prompts to help ideas become long-term knowledge."
           imageSrc={ROBOT_GRAPHICS.audio}
           imageAlt="Robot reviewing study notes"
         />

@@ -111,12 +111,9 @@ function normalizeExercise(value: unknown): Exercise | null {
   const exerciseTypes: readonly ExerciseType[] = [
     'multiple_choice',
     'true_false',
-    'fill_blank',
     'matching',
     'ordering',
-        'flashcard',
-    'scenario',
-    'explain_concept'
+    'flashcard'
   ];
 
   const id = asString(value.id);

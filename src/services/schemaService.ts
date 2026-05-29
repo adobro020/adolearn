@@ -19,12 +19,9 @@ export const VALID_LESSON_TYPES: LessonType[] = ['standard', 'review', 'final_ch
 export const VALID_EXERCISE_TYPES: ExerciseType[] = [
   'multiple_choice',
   'true_false',
-  'fill_blank',
   'matching',
   'ordering',
-  'flashcard',
-  'scenario',
-  'explain_concept'
+  'flashcard'
 ];
 
 export const COURSE_REQUIRED_FIELDS = [
@@ -92,9 +89,9 @@ export const ADOLEARN_COURSE_SCHEMA = {
                     id: 'string',
                     type: VALID_EXERCISE_TYPES,
                     prompt: 'string',
-                    choices: 'optional array of { id: string, text: string }; required for multiple_choice and choice-based scenario',
+                    choices: 'optional array of { id: string, text: string }; required for multiple_choice',
                     answer: 'optional string | boolean | string[]',
-                    acceptedAnswers: 'string[]; recommended for text-graded exercises',
+                    acceptedAnswers: 'optional string[] for answer metadata; no typed-answer exercises are generated',
                     explanation: 'string; required for every exercise',
                     hint: 'string; can be empty',
                     sourceReference: 'optional source citation object with excerpt/location',

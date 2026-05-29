@@ -121,12 +121,9 @@ const COURSE_SCHEMA = {
                               enum: [
                                 'multiple_choice',
                                 'true_false',
-                                'fill_blank',
                                 'matching',
                                 'ordering',
-                                                                'flashcard',
-                                'scenario',
-                                'explain_concept'
+                                'flashcard'
                               ]
                             },
                             prompt: { type: 'string' },
@@ -342,7 +339,7 @@ Critical rules:
 - Prefer 2 sections, each with 2 units, each unit with 2 to 3 lessons.
 - Include at least one review lesson and one final_challenge lesson.
 - Include 5 exercises per lesson when possible.
-- Exercise types may include multiple_choice, true_false, fill_blank, matching, ordering, flashcard, scenario, and explain_concept. Do not generate short_answer exercises.
+- Exercise types may include multiple_choice, true_false, matching, ordering, and flashcard. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises.
 - For matching, create term-to-definition pairs: pair.left is the term and pair.right is the definition from the source.
 
 Course settings:

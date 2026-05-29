@@ -32,12 +32,12 @@ export function Header({ activePage, onLogoClick, onPageChange }: HeaderProps) {
           <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.08)] transition group-hover:border-emerald-200 group-hover:shadow-[0_14px_32px_rgba(16,185,129,0.16)] dark:border-slate-700/70 dark:bg-slate-900">
             <img src={ROBOT_GRAPHICS.head} alt="" className="h-12 w-12 object-contain" />
           </span>
-          <span className="truncate text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl dark:text-white">
+          <span className="hidden truncate text-2xl font-black tracking-[-0.04em] text-slate-950 sm:block sm:text-3xl dark:text-white">
             AdoLearn
           </span>
         </button>
 
-        <nav className="flex shrink-0 items-center gap-1 sm:gap-2" aria-label="Primary navigation">
+        <nav className="flex shrink-0 items-center gap-1 bg-transparent sm:gap-2" aria-label="Primary navigation">
           {NAV_ITEMS.map((item) => {
             const isActive = item.id === activeNav;
 
@@ -49,8 +49,8 @@ export function Header({ activePage, onLogoClick, onPageChange }: HeaderProps) {
                 className={classNames(
                   'rounded-full px-3 py-2 text-sm font-extrabold tracking-tight transition sm:px-5',
                   isActive
-                    ? 'bg-slate-950 text-white shadow-[0_10px_28px_rgba(15,23,42,0.16)] dark:bg-slate-800 dark:text-white dark:ring-1 dark:ring-emerald-400/45'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white'
+                    ? 'bg-slate-950 text-white shadow-[0_10px_28px_rgba(15,23,42,0.16)] dark:bg-transparent dark:text-white dark:ring-1 dark:ring-emerald-400/55'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:bg-transparent dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white'
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >

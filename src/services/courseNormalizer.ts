@@ -97,7 +97,7 @@ function normalizeLessonType(value: unknown): LessonType {
 }
 
 function normalizeExerciseType(value: unknown): ExerciseType {
-  return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'explain_concept';
+  return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'flashcard';
 }
 
 function normalizeAnswer(value: unknown): ExerciseAnswer | undefined {

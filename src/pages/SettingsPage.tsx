@@ -445,8 +445,8 @@ export function SettingsPage() {
           </div>
 
           <div className="rounded-[1.75rem] bg-rose-50 p-5 ring-1 ring-rose-100">
-            <h3 className="text-lg font-black text-rose-950">Data controls</h3>
-            <p className="mt-2 text-sm font-semibold leading-6 text-rose-800">
+            <h3 className="text-lg font-black text-rose-600 dark:text-rose-300">Data controls</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-rose-500 dark:text-rose-300/90">
               These actions affect only this browser. They do not delete anything from a server because
               AdoLearn has no backend yet.
             </p>

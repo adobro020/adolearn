@@ -241,14 +241,6 @@ function validateExercise(
   if (candidate.type === 'ordering') {
     validateOrdering(candidate, path, errors, options);
   }
-
-  if (
-    ['fill_blank',  'scenario', 'explain_concept'].includes(candidate.type) &&
-    !('answer' in candidate) &&
-    (!Array.isArray(candidate.acceptedAnswers) || candidate.acceptedAnswers.length === 0)
-  ) {
-    warnings.push(`${path} should include answer or acceptedAnswers for text-style grading.`);
-  }
 }
 
 function validateLesson(
