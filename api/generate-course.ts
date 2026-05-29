@@ -39,8 +39,8 @@ interface OpenAIResponsePayload {
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-5.4-mini';
 const ALLOWED_MODELS = new Set(['gpt-5.4-mini', 'gpt-5-mini', 'gpt-5']);
-const MAX_REQUEST_BYTES = 1_000_000;
-const MAX_SOURCE_MATERIAL_CHARACTERS = 120_000;
+const MAX_REQUEST_BYTES = 700_000;
+const MAX_SOURCE_MATERIAL_CHARACTERS = 50_000;
 const COURSE_SCHEMA = {
   type: 'object',
   additionalProperties: true,
@@ -452,7 +452,7 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
     const message = error instanceof Error ? error.message : '';
 
     if (message === 'request_too_large') {
-      sendError(response, 422, 'request_too_large', 'The source material is too large. Try a shorter paste.');
+      sendError(response, 422, 'request_too_large', 'The source material must be 50,000 characters or fewer.');
       return;
     }
 
@@ -466,7 +466,7 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
   }
 
   if (getRequestByteSize(body) > MAX_REQUEST_BYTES) {
-    sendError(response, 422, 'request_too_large', 'The source material is too large. Try a shorter paste.');
+    sendError(response, 422, 'request_too_large', 'The source material must be 50,000 characters or fewer.');
     return;
   }
 
@@ -479,7 +479,7 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
   }
 
   if (sourceMaterial.length > MAX_SOURCE_MATERIAL_CHARACTERS) {
-    sendError(response, 422, 'source_too_large', 'The source material is too large. Try a shorter paste.');
+    sendError(response, 422, 'source_too_large', 'The source material must be 50,000 characters or fewer.');
     return;
   }
 

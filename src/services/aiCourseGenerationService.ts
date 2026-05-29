@@ -50,10 +50,7 @@ interface GenerateCourseAPISuccessPayload {
 
 const GENERATE_COURSE_API_URL = '/api/generate-course';
 const MAX_VALIDATION_ERRORS_IN_MESSAGE = 8;
-const MAX_PROXY_SOURCE_MATERIAL_CHARS = 90_000;
-const LONG_SOURCE_CONDENSED_WARNING =
-  'Long source material was condensed before sending it to the course generator to keep the request reliable.';
-
+const MAX_PROXY_SOURCE_MATERIAL_CHARS = 50_000;
 function getSourcePreview(sourceMaterial: string): string {
   return sourceMaterial.replace(/\s+/g, ' ').trim().slice(0, 500);
 }
@@ -73,19 +70,14 @@ function compactSourceMaterial(sourceMaterial: string): string {
 function prepareSourceMaterialForProxy(sourceMaterial: string): { sourceMaterial: string; wasCondensed: boolean } {
   const compacted = compactSourceMaterial(sourceMaterial);
 
-  if (compacted.length <= MAX_PROXY_SOURCE_MATERIAL_CHARS) {
-    return { sourceMaterial: compacted, wasCondensed: false };
+  if (compacted.length > MAX_PROXY_SOURCE_MATERIAL_CHARS) {
+    throw new AICourseGenerationError(
+      'source_too_large',
+      'The source material must be 50,000 characters or fewer.'
+    );
   }
 
-  const headLength = 50_000;
-  const tailLength = 35_000;
-  const omittedCharacters = compacted.length - headLength - tailLength;
-  const separator = `\n\n[Middle content condensed for reliable generation. Approximately ${omittedCharacters.toLocaleString()} characters omitted. Use the beginning and ending context only when supported by the pasted material.]\n\n`;
-
-  return {
-    sourceMaterial: `${compacted.slice(0, headLength)}${separator}${compacted.slice(-tailLength)}`,
-    wasCondensed: true
-  };
+  return { sourceMaterial: compacted, wasCondensed: false };
 }
 
 function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | null): AICourseGenerationError {
@@ -95,7 +87,7 @@ function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | 
   if (status === 413 || status === 422 || code === 'source_too_large' || code === 'request_too_large') {
     return new AICourseGenerationError(
       'source_too_large',
-      'The source material is too large. Try a shorter paste.',
+      'The source material must be 50,000 characters or fewer.',
       details
     );
   }
@@ -246,7 +238,6 @@ export async function generateCourseWithAI({
   return {
     course: normalizedCourse,
     validationWarnings: [
-      ...(preparedSource.wasCondensed ? [LONG_SOURCE_CONDENSED_WARNING] : []),
       ...(payload.validationWarnings ?? []),
       ...draftValidation.warnings,
       ...normalizedValidation.warnings

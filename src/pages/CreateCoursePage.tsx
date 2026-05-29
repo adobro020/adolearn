@@ -24,6 +24,7 @@ interface GenerationStep {
 
 
 const MINIMUM_RECOMMENDED_CHARACTERS = 180;
+const SOURCE_MATERIAL_CHARACTER_LIMIT = 50_000;
 const BROWSER_STORAGE_COURSE_WARNING_BYTES = 4_500_000;
 const GENERATION_STEPS: GenerationStep[] = [
   {
@@ -59,22 +60,7 @@ const GENERATION_PROGRESS_MILESTONES = [8, 19, 33, 51, 73, 89, 97] as const;
 
 const MAX_UPLOAD_FILE_BYTES = 2_500_000;
 const MAX_UPLOAD_FILES_PER_BATCH = 8;
-const ACCEPTED_SOURCE_FILE_TYPES = '.txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.srt,.vtt,.yaml,.yml';
-const TEXT_LIKE_EXTENSIONS = new Set([
-  'txt',
-  'md',
-  'markdown',
-  'csv',
-  'json',
-  'html',
-  'htm',
-  'xml',
-  'log',
-  'srt',
-  'vtt',
-  'yaml',
-  'yml'
-]);
+const ACCEPTED_SOURCE_FILE_TYPES = '.txt,text/plain';
 
 function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -163,16 +149,25 @@ function getFileExtension(fileName: string): string {
   return fileName.split('.').pop()?.toLowerCase() ?? '';
 }
 
-function isTextLikeFile(file: File): boolean {
-  if (file.type.startsWith('text/')) {
-    return true;
-  }
-
-  return TEXT_LIKE_EXTENSIONS.has(getFileExtension(file.name));
+function isSupportedTxtFile(file: File): boolean {
+  return getFileExtension(file.name) === 'txt';
 }
 
-function formatFileUploadBlock(fileName: string, contents: string): string {
-  return [`Uploaded file: ${fileName}`, '```', contents.trim(), '```'].join('\n');
+function getLimitedSourceMaterial(value: string): string {
+  return value.slice(0, SOURCE_MATERIAL_CHARACTER_LIMIT);
+}
+
+function readFileAsText(file: File): Promise<string> {
+  if (typeof file.text === 'function') {
+    return file.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(reader.error ?? new Error('File could not be read.'));
+    reader.readAsText(file);
+  });
 }
 
 export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
@@ -256,13 +251,13 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     setIsReadingSourceFiles(true);
 
     for (const file of selectedFiles) {
-      if (file.size > MAX_UPLOAD_FILE_BYTES || !isTextLikeFile(file)) {
+      if (file.size > MAX_UPLOAD_FILE_BYTES || !isSupportedTxtFile(file)) {
         skippedNames.push(file.name);
         continue;
       }
 
       try {
-        const fileText = await file.text();
+        const fileText = await readFileAsText(file);
         const cleanedFileText = fileText.trim();
 
         if (!cleanedFileText) {
@@ -270,7 +265,14 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           continue;
         }
 
-        acceptedBlocks.push(formatFileUploadBlock(file.name, cleanedFileText));
+        const nextSourceMaterial = [...acceptedBlocks, cleanedFileText].join('\n\n');
+
+        if (cleanedFileText.length > SOURCE_MATERIAL_CHARACTER_LIMIT || nextSourceMaterial.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
+          skippedNames.push(file.name);
+          continue;
+        }
+
+        acceptedBlocks.push(cleanedFileText);
         acceptedNames.push(file.name);
       } catch {
         skippedNames.push(file.name);
@@ -287,7 +289,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
     if (acceptedBlocks.length === 0) {
       setUploadNotice(
-        'No readable course material was added. Try a text-based file, or paste the material into the text box.'
+        'No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.'
       );
       setIsReadingSourceFiles(false);
       return;
@@ -295,20 +297,20 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
     if (skippedNames.length > 0) {
       setUploadNotice(
-        `Uploaded ${acceptedNames.length} readable file${acceptedNames.length === 1 ? '' : 's'}. Skipped unsupported or oversized file${skippedNames.length === 1 ? '' : 's'}: ${skippedNames.join(', ')}.`
+        `Uploaded ${acceptedNames.length} TXT file${acceptedNames.length === 1 ? '' : 's'}. Skipped unsupported, oversized, or over-limit file${skippedNames.length === 1 ? '' : 's'}: ${skippedNames.join(', ')}.`
       );
       setIsReadingSourceFiles(false);
       return;
     }
 
-    setUploadNotice(`Uploaded ${acceptedNames.length} file${acceptedNames.length === 1 ? '' : 's'} successfully. The paste box is locked until you remove the file upload.`);
+    setUploadNotice(`Uploaded ${acceptedNames.length} TXT file${acceptedNames.length === 1 ? '' : 's'} successfully. The paste box is locked until you remove the file upload.`);
     setIsReadingSourceFiles(false);
   }
 
   function handleRemoveUploadedFiles() {
     setUploadedFileNames([]);
     setSourceMaterial('');
-    setUploadNotice('File upload removed. You can paste material or upload a different file.');
+    setUploadNotice('File upload removed. You can paste material or upload a different TXT file.');
     setError(null);
     setSuccessMessage(null);
     setLastWarning(null);
@@ -316,10 +318,10 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   }
 
   function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
-    const selectedFiles = event.target.files;
+    const selectedFiles = event.target.files ? Array.from(event.target.files) : [];
     event.target.value = '';
 
-    if (selectedFiles) {
+    if (selectedFiles.length > 0) {
       void handleSourceFiles(selectedFiles);
     }
   }
@@ -373,7 +375,15 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
   async function handleGenerateCourse() {
     if (!trimmedSourceMaterial) {
-      setError('Add learning material first by pasting text or uploading a readable text-based file.');
+      setError('Add learning material first by pasting text or uploading a TXT file.');
+      setSuccessMessage(null);
+      setLastWarning(null);
+      setActiveStepIndex(-1);
+      return;
+    }
+
+    if (sourceMaterial.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
+      setError('Learning material must be 50,000 characters or fewer.');
       setSuccessMessage(null);
       setLastWarning(null);
       setActiveStepIndex(-1);
@@ -525,7 +535,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                 <p className="mx-auto mt-2 max-w-md text-xs font-bold leading-5 text-slate-500">
                   {hasUploadedFiles
                     ? 'AdoLearn will generate from the uploaded file content. Remove it to re-enable manual pasting.'
-                    : 'Supports text-like files such as TXT, Markdown, CSV, JSON, HTML, subtitles, and logs.'}
+                    : 'Only TXT files are supported right now. Support for other file types will be added in a future update.'}
                 </p>
                 {hasUploadedFiles ? (
                   <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-emerald-200">
@@ -556,19 +566,20 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                   <span className="text-sm font-black text-slate-700">Learning material</span>
                   <span className="text-xs font-bold text-slate-400">
-                    {hasUploadedFiles ? 'Paste disabled while file is uploaded' : `${characterCount.toLocaleString()} characters`}
+                    {hasUploadedFiles ? `${characterCount.toLocaleString()} / ${SOURCE_MATERIAL_CHARACTER_LIMIT.toLocaleString()} characters from TXT upload` : `${characterCount.toLocaleString()} / ${SOURCE_MATERIAL_CHARACTER_LIMIT.toLocaleString()} characters`}
                   </span>
                 </div>
                 <textarea
                   id="source-material"
                   value={sourceMaterial}
                   onChange={(event) => {
-                    setSourceMaterial(event.target.value);
+                    setSourceMaterial(getLimitedSourceMaterial(event.target.value));
                     if (error || successMessage || lastWarning) {
                       resetMessages();
                     }
                   }}
                   disabled={isGenerating || hasUploadedFiles}
+                  maxLength={SOURCE_MATERIAL_CHARACTER_LIMIT}
                   className="mt-2 min-h-72 w-full resize-y rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder={hasUploadedFiles ? 'Remove the uploaded file to paste material manually.' : 'Paste course notes, an article, a podcast transcript, lecture notes, or a study guide here...'}
                 />
