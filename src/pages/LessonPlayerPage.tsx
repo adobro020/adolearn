@@ -364,7 +364,11 @@ export function LessonPlayerPage({
   const [attemptAnswers, setAttemptAnswers] = useState<LessonAttemptAnswer[]>([]);
   const [savedAttempt, setSavedAttempt] = useState<LessonAttemptSaveResult | null>(null);
   const [showEndScreen, setShowEndScreen] = useState(false);
-  const currentExercise = lesson?.exercises[currentExerciseIndex] ?? null;
+  const practiceExercises = useMemo(
+    () => lesson?.exercises.filter((exercise) => exercise.type !== 'flashcard') ?? [],
+    [lesson]
+  );
+  const currentExercise = practiceExercises[currentExerciseIndex] ?? null;
 
   useEffect(() => {
     setMatchingAnswers({});
@@ -399,7 +403,7 @@ export function LessonPlayerPage({
     );
   }
 
-  const totalExercises = lesson.exercises.length;
+  const totalExercises = practiceExercises.length;
   const exerciseNumber = Math.min(currentExerciseIndex + 1, totalExercises);
   const progressPercentage = totalExercises > 0 ? (exerciseNumber / totalExercises) * 100 : 0;
   const localResult = getLessonResult(attemptAnswers, totalExercises, lesson);
@@ -1040,7 +1044,7 @@ export function LessonPlayerPage({
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl flex-col items-center justify-center text-center">
           <h1 className="text-4xl font-black tracking-tight text-slate-950 dark:text-white">No exercises yet</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-zinc-300">
-            This lesson does not include supported exercises. Return to the course map and try another lesson.
+This lesson does not include supported practice questions. Flashcards for this course live in the Flashcards section on the course page.
           </p>
         </div>
       </section>
@@ -1088,8 +1092,7 @@ export function LessonPlayerPage({
           {renderExerciseInput(currentExercise)}
         </div>
 
-        {currentExercise.type !== 'flashcard' ? (
-          <button
+        <button
             type="button"
             onClick={submitAnswer}
             disabled={!canSubmit}
@@ -1103,7 +1106,6 @@ export function LessonPlayerPage({
           >
             Submit
           </button>
-        ) : null}
 
         {feedback ? (
           <div

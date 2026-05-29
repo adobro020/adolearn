@@ -26,6 +26,7 @@ export interface Course {
   estimatedTotalMinutes: number;
   sections: Section[];
   keyConcepts: string[];
+  flashcards?: Exercise[];
 }
 
 export interface Section {

@@ -66,6 +66,7 @@ export const ADOLEARN_COURSE_SCHEMA = {
     style: VALID_COURSE_STYLES,
     estimatedTotalMinutes: 'number; sum of lesson estimates, or omit only when a normalizer will add it',
     keyConcepts: 'string[]; source-grounded concepts only',
+    flashcards: 'optional array of flashcard exercises displayed in the course flashcard section, not inside lessons',
     sections: [
       {
         id: 'string',
@@ -123,7 +124,8 @@ export function getCourseJSONContractSummary(): string {
     'Every exercise must include a prompt and an explanation.',
     'multiple_choice exercises require choices.',
     'matching exercises require pairs.',
-    'ordering exercises require items and correctOrder.'
+    'ordering exercises require items and correctOrder.',
+    'flashcard exercises should be used only for the course-level flashcard bank, not as lesson questions.'
   ].join('\n');
 }
 
@@ -145,6 +147,13 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
     keyConcepts: {
       type: 'array',
       items: { type: 'string' }
+    },
+    flashcards: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: true
+      }
     },
     sections: {
       type: 'array',

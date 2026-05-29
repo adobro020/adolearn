@@ -11,7 +11,7 @@ import { removeItem, safeGetJSON, safeSetJSON } from './storageService';
 const MODEL_VALUES = ['gpt-5-nano', 'gpt-5-mini', 'gpt-5'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  modelName: 'gpt-5-nano',
+  modelName: 'gpt-5-mini',
   theme: 'system',
   preferredDifficulty: 'Auto',
   preferredCourseStyle: 'Quick overview',

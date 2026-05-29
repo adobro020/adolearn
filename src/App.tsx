@@ -273,7 +273,7 @@ export default function App() {
     }
   }
 
-  const isLessonFullscreen = activePage === 'lessonPlayer';
+  const isLessonFullscreen = activePage === 'lessonPlayer' || activePage === 'review';
   if (isLessonFullscreen) {
     return (
       <div className="min-h-screen bg-white text-slate-950 transition-colors duration-300 dark:bg-[#080a12] dark:text-slate-100">

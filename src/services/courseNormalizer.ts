@@ -316,6 +316,28 @@ function normalizeSection(value: unknown, index: number, seenIds: Set<string>): 
   };
 }
 
+
+function extractFlashcardsFromSections(sections: Section[]): Exercise[] {
+  return sections.flatMap((section) =>
+    section.units.flatMap((unit) =>
+      unit.lessons.flatMap((lesson) => lesson.exercises.filter((exercise) => exercise.type === 'flashcard'))
+    )
+  );
+}
+
+function removeFlashcardsFromSections(sections: Section[]): Section[] {
+  return sections.map((section) => ({
+    ...section,
+    units: section.units.map((unit) => ({
+      ...unit,
+      lessons: unit.lessons.map((lesson) => ({
+        ...lesson,
+        exercises: lesson.exercises.filter((exercise) => exercise.type !== 'flashcard')
+      }))
+    }))
+  }));
+}
+
 function calculateEstimatedTotalMinutes(sections: Section[]): number {
   return sections.reduce(
     (sectionTotal, section) =>
@@ -338,7 +360,13 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
   const record = isRecord(candidate) ? candidate : {};
   const seenIds = new Set<string>();
   const sectionsSource = Array.isArray(record.sections) ? record.sections : [];
-  const sections = sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds));
+  const sectionsWithFlashcards = sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds));
+  const topLevelFlashcardsSource = Array.isArray(record.flashcards) ? record.flashcards : [];
+  const topLevelFlashcards = topLevelFlashcardsSource
+    .map((exercise, exerciseIndex) => normalizeExercise({ ...(isRecord(exercise) ? exercise : {}), type: 'flashcard' }, exerciseIndex, seenIds))
+    .filter((exercise) => exercise.type === 'flashcard');
+  const flashcards = [...topLevelFlashcards, ...extractFlashcardsFromSections(sectionsWithFlashcards)];
+  const sections = removeFlashcardsFromSections(sectionsWithFlashcards);
   const keyConcepts = normalizeStringArray(record.keyConcepts, ['Main idea', 'Key evidence', 'Review concept']);
   const estimatedTotalMinutes = Math.max(1, calculateEstimatedTotalMinutes(sections));
 
@@ -361,7 +389,8 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
     style: normalizeCourseStyle(record.style, options.fallbackCourseStyle ?? 'Quick overview'),
     estimatedTotalMinutes,
     sections,
-    keyConcepts
+    keyConcepts,
+    flashcards
   };
 
   return makeBrowserStorageSafe(normalizedCourse);

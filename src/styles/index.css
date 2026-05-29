@@ -618,3 +618,55 @@ img {
 .dark .text-rose-500 {
   color: #fda4af !important;
 }
+
+/* Force every black/dark text utility to white when the app is in dark mode. */
+.dark .text-black,
+.dark .text-zinc-950,
+.dark .text-zinc-900,
+.dark .text-zinc-800,
+.dark .text-neutral-950,
+.dark .text-neutral-900,
+.dark .text-neutral-800,
+.dark .text-stone-950,
+.dark .text-stone-900,
+.dark .text-stone-800,
+.dark .text-gray-950,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-slate-950,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .dark\:text-black,
+.dark .dark\:text-zinc-950,
+.dark .dark\:text-zinc-900,
+.dark .dark\:text-zinc-800,
+.dark .dark\:text-neutral-950,
+.dark .dark\:text-neutral-900,
+.dark .dark\:text-neutral-800,
+.dark .dark\:text-stone-950,
+.dark .dark\:text-stone-900,
+.dark .dark\:text-stone-800,
+.dark .dark\:text-gray-950,
+.dark .dark\:text-gray-900,
+.dark .dark\:text-gray-800,
+.dark .dark\:text-slate-950,
+.dark .dark\:text-slate-900,
+.dark .dark\:text-slate-800,
+.dark .dark\:text-slate-700,
+.dark [class*='text-#000'],
+.dark [class*='text-\[black\]'],
+.dark [class*='text-\[\#000'],
+.dark [class*='dark:text-black'],
+.dark [class*='dark:text-slate-950'],
+.dark [class*='dark:text-zinc-950'] {
+  color: #ffffff !important;
+}
+
+.dark button.dark\:text-black,
+.dark a.dark\:text-black,
+.dark span.dark\:text-black,
+.dark p.dark\:text-black,
+.dark div.dark\:text-black {
+  color: #ffffff !important;
+}

@@ -74,7 +74,8 @@ Suggested course size:
 - About ${exercisesPerLesson} exercises per lesson
 
 Exercise requirements:
-- Mix exercise types when possible: multiple_choice, true_false, matching, ordering, and flashcard. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises.
+- Mix lesson exercise types when possible: multiple_choice, true_false, matching, and ordering. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
+- Add optional course-level flashcards in the top-level flashcards array when useful. Flashcards should not appear inside lesson exercises.
 - For multiple_choice, include choices and make sure the correct answer is represented.
 - For matching, create term-to-definition pairs only: each pair.left must be a short term, concept, person, process, or vocabulary phrase; each pair.right must be its concise definition or description from the source. Definitions must be distinct and specific enough that each term maps to one clear match.
 - For ordering, include items as an array of objects shaped like { "id": "step_1", "text": "..." }. Never use plain strings in items. Include correctOrder as an array of those same item IDs.

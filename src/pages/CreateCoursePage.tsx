@@ -248,7 +248,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     trimmedSourceMaterial.length < MINIMUM_RECOMMENDED_CHARACTERS;
   const hasUploadedFiles = uploadedFileNames.length > 0;
   const characterCount = sourceMaterial.length;
-  const generationModeLabel = getGenerationModeLabel(settings);
 
   useEffect(() => {
     if (!isGenerating || successMessage) {
@@ -651,8 +650,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                     Course settings
                   </p>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Selected AI model: <span className="font-black text-slate-800">{generationModeLabel}</span>.
-                    Adjust defaults any time in Settings.
+                    Adjust learning defaults any time in Settings.
                   </p>
                 </div>
 
