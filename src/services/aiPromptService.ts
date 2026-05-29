@@ -1,11 +1,7 @@
-import type { CourseStyle, Difficulty, LessonLength } from '../types/settings';
 import { getCourseSchemaForPrompt, getCourseJSONContractSummary } from './schemaService';
 
 export interface CourseGenerationPromptOptions {
   optionalTitle?: string;
-  difficulty: Difficulty;
-  courseStyle: CourseStyle;
-  lessonLength: LessonLength;
   targetSectionCount?: number;
   targetUnitsPerSection?: number;
   targetLessonsPerUnit?: number;
@@ -16,70 +12,43 @@ function cleanPromptInput(value: string): string {
   return value.replace(/\r\n/g, '\n').replace(/[\t ]+/g, ' ').trim();
 }
 
-function getLessonLengthGuidance(lessonLength: LessonLength): string {
-  const guidance: Record<LessonLength, string> = {
-    Short: 'Keep lessons very short: 4-6 minutes each with concise prompts.',
-    Medium: 'Keep lessons moderate: 7-10 minutes each with balanced explanation and practice.',
-    Long: 'Lessons can be deeper: 10-15 minutes each, but still interactive and focused.'
-  };
-
-  return guidance[lessonLength];
-}
-
 export function buildCourseGenerationPrompt(
   sourceMaterial: string,
   options: CourseGenerationPromptOptions
 ): string {
   const cleanedSourceMaterial = cleanPromptInput(sourceMaterial);
-  const titleGuidance = options.optionalTitle?.trim()
-    ? `Use this course title exactly unless it conflicts with the source material: ${options.optionalTitle.trim()}`
-    : 'Create a concise, learner-friendly course title from the provided source material.';
+  const providedTitle = options.optionalTitle?.trim() || 'Create a concise, learner-friendly course title from the provided source material.';
 
-  const sectionCount = options.targetSectionCount ?? 2;
-  const unitsPerSection = options.targetUnitsPerSection ?? 2;
-  const lessonsPerUnit = options.targetLessonsPerUnit ?? 3;
-  const exercisesPerLesson = options.targetExercisesPerLesson ?? 5;
+  return `You are an expert instructional designer creating an interactive AdoLearn course.
 
-  return `You are an expert instructional designer creating an interactive course for AdoLearn.
+Transform the provided source material into a short, structured, playful, bite-sized course.
 
-Your task:
-Transform the provided source material into a short, structured, interactive learning course.
+Rules:
 
-Hard rules:
-- Use only the provided source material.
-- Do not invent unsupported facts, examples, definitions, dates, claims, statistics, or citations.
-- If the source material does not support a detail, leave it out or write a source-grounded generalization.
-- Return valid JSON only. Do not include markdown, code fences, commentary, or explanations outside the JSON.
-- Return one top-level Course object directly, not an object wrapped in a \`course\` property.
-- The JSON must match the AdoLearn Course type and the schema-like contract below.
-- Keep lessons short, interactive, and learner-friendly.
-- Include explanations and hints for exercises.
-- Include learning objectives for every lesson.
-- Include key concepts for the course.
-- Include review lessons.
-- Include final challenges.
-- Make the experience feel playful, clear, and bite-sized.
+Use only the source material. Do not invent facts, examples, claims, dates, stats, citations, or definitions.
+Leave out unsupported details or generalize only when source-grounded.
+Return valid JSON only, with no markdown, code fences, or commentary.
+Return one top-level Course object directly, not wrapped in a course property.
+Match the AdoLearn Course type and schema contract below.
 
-Course preferences:
-- Difficulty: ${options.difficulty}
-- Course style: ${options.courseStyle}
-- Lesson length: ${options.lessonLength}
-- Lesson length guidance: ${getLessonLengthGuidance(options.lessonLength)}
-- ${titleGuidance}
+Course title: ${providedTitle}
 
-Suggested course size:
-- About ${sectionCount} sections
-- About ${unitsPerSection} units per section
-- About ${lessonsPerUnit} lessons per unit
-- About ${exercisesPerLesson} exercises per lesson
+Course structure:
 
-Exercise requirements:
-- Mix lesson exercise types when possible: multiple_choice, true_false, matching, and ordering. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
-- Add optional course-level flashcards in the top-level flashcards array when useful. Flashcards should not appear inside lesson exercises.
-- For multiple_choice, include choices and make sure the correct answer is represented.
-- For matching, create term-to-definition pairs only: each pair.left must be a short term, concept, person, process, or vocabulary phrase; each pair.right must be its concise definition or description from the source. Definitions must be distinct and specific enough that each term maps to one clear match.
-- For ordering, include items as an array of objects shaped like { "id": "step_1", "text": "..." }. Never use plain strings in items. Include correctOrder as an array of those same item IDs.
-- Every exercise must include prompt, explanation, hint, and concept when possible.
+About 2 sections
+About 2 units per section
+About 3 lessons per unit
+About 5 exercises per lesson
+Include course key concepts, lesson objectives, review lessons, final challenges, explanations, and hints.
+
+Lesson exercises:
+
+Use a mix of multiple_choice, true_false, matching, and ordering.
+Do not use short_answer, fill_blank, scenario, explain_concept, or other typed/written-answer exercises.
+Each exercise should include prompt, explanation, hint, and concept when possible.
+multiple_choice: include choices and the correct answer.
+matching: use term-to-definition pairs only. left must be a short term/concept/person/process/vocabulary phrase; right must be a concise, distinct source-based definition.
+ordering: items must be objects like { "id": "step_1", "text": "..." }; correctOrder must list those same IDs.
 
 JSON contract summary:
 ${getCourseJSONContractSummary()}

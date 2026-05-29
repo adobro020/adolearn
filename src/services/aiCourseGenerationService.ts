@@ -1,5 +1,4 @@
 import type { Course } from '../types/course';
-import type { CourseStyle, Difficulty, LessonLength } from '../types/settings';
 import { normalizeCourseFromAIJSON } from './courseNormalizer';
 import { validateCourse } from './courseValidator';
 
@@ -28,9 +27,6 @@ export class AICourseGenerationError extends Error {
 export interface GenerateCourseWithAIInput {
   sourceMaterial: string;
   optionalTitle?: string;
-  difficulty: Difficulty;
-  courseStyle: CourseStyle;
-  lessonLength: LessonLength;
   modelName?: string;
 }
 
@@ -177,9 +173,6 @@ async function callServerProxy(
       body: JSON.stringify({
         sourceMaterial: preparedSourceMaterial,
         optionalTitle: input.optionalTitle,
-        difficulty: input.difficulty,
-        courseStyle: input.courseStyle,
-        lessonLength: input.lessonLength,
         modelName: cleanModelName(input.modelName)
       })
     });
@@ -205,9 +198,6 @@ async function callServerProxy(
 export async function generateCourseWithAI({
   sourceMaterial,
   optionalTitle,
-  difficulty,
-  courseStyle,
-  lessonLength,
   modelName
 }: GenerateCourseWithAIInput): Promise<GenerateCourseWithAIResult> {
   const preparedSource = prepareSourceMaterialForProxy(sourceMaterial);
@@ -215,9 +205,6 @@ export async function generateCourseWithAI({
     {
       sourceMaterial,
       optionalTitle,
-      difficulty,
-      courseStyle,
-      lessonLength,
       modelName
     },
     preparedSource.sourceMaterial
@@ -244,8 +231,6 @@ export async function generateCourseWithAI({
 
   const normalizedCourse = normalizeCourseFromAIJSON(rawCourse, {
     fallbackTitle: optionalTitle?.trim() || 'Generated Learning Path',
-    fallbackDifficulty: difficulty,
-    fallbackCourseStyle: courseStyle,
     sourceMaterialPreview: getSourcePreview(sourceMaterial)
   });
   const normalizedValidation = validateCourse(normalizedCourse);

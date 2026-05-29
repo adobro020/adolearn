@@ -10,16 +10,9 @@ type ApiResponse = {
   setHeader?: (name: string, value: string) => void;
 };
 
-type Difficulty = 'Auto' | 'Beginner' | 'Intermediate' | 'Advanced';
-type CourseStyle = 'Exam prep' | 'Quick overview' | 'Deep learning' | 'Flashcard-heavy';
-type LessonLength = 'Short' | 'Medium' | 'Long';
-
 interface GenerateCourseRequestBody {
   sourceMaterial?: unknown;
   optionalTitle?: unknown;
-  difficulty?: unknown;
-  courseStyle?: unknown;
-  lessonLength?: unknown;
   modelName?: unknown;
 }
 
@@ -44,22 +37,16 @@ interface OpenAIResponsePayload {
 }
 
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
-const DEFAULT_MODEL = 'gpt-5-nano';
-const ALLOWED_MODELS = new Set(['gpt-5-nano', 'gpt-5-mini', 'gpt-5']);
+const DEFAULT_MODEL = 'gpt-5.4-nano';
+const ALLOWED_MODELS = new Set(['gpt-5.4-nano', 'gpt-5-nano', 'gpt-5-mini', 'gpt-5']);
 const MAX_REQUEST_BYTES = 1_000_000;
 const MAX_SOURCE_MATERIAL_CHARACTERS = 120_000;
-const DEFAULT_DIFFICULTY: Difficulty = 'Auto';
-const DEFAULT_COURSE_STYLE: CourseStyle = 'Quick overview';
-const DEFAULT_LESSON_LENGTH: LessonLength = 'Medium';
-
 const COURSE_SCHEMA = {
   type: 'object',
   additionalProperties: true,
   required: [
     'title',
     'description',
-    'difficulty',
-    'style',
     'estimatedTotalMinutes',
     'sections',
     'keyConcepts'
@@ -68,8 +55,6 @@ const COURSE_SCHEMA = {
     title: { type: 'string' },
     description: { type: 'string' },
     sourceMaterialPreview: { type: 'string' },
-    difficulty: { type: 'string' },
-    style: { type: 'string' },
     estimatedTotalMinutes: { type: 'number' },
     keyConcepts: { type: 'array', items: { type: 'string' } },
     sections: {
@@ -122,8 +107,7 @@ const COURSE_SCHEMA = {
                                 'multiple_choice',
                                 'true_false',
                                 'matching',
-                                'ordering',
-                                'flashcard'
+                                'ordering'
                               ]
                             },
                             prompt: { type: 'string' },
@@ -214,27 +198,6 @@ function getAllowedModel(value: unknown): string {
   return ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
 }
 
-function getDifficulty(value: unknown): Difficulty {
-  return value === 'Beginner' || value === 'Intermediate' || value === 'Advanced' || value === 'Auto'
-    ? value
-    : DEFAULT_DIFFICULTY;
-}
-
-function getCourseStyle(value: unknown): CourseStyle {
-  return value === 'Exam prep' ||
-    value === 'Quick overview' ||
-    value === 'Deep learning' ||
-    value === 'Flashcard-heavy'
-    ? value
-    : DEFAULT_COURSE_STYLE;
-}
-
-function getLessonLength(value: unknown): LessonLength {
-  return value === 'Short' || value === 'Medium' || value === 'Long'
-    ? value
-    : DEFAULT_LESSON_LENGTH;
-}
-
 function byteLength(value: string): number {
   return Buffer.byteLength(value, 'utf8');
 }
@@ -315,93 +278,72 @@ async function readRequestBody(request: ApiRequest): Promise<unknown> {
   });
 }
 
+function getCourseJSONContractSummary(): string {
+  return [
+    'Valid lesson types: standard, review, final_challenge',
+    'Valid exercise types: multiple_choice, true_false, matching, ordering',
+    'Every course must contain sections, every section must contain units, every unit must contain lessons, and every lesson must contain exercises.',
+    'Every exercise must include a prompt and an explanation.',
+    'multiple_choice exercises require choices.',
+    'matching exercises require term-to-definition pairs.',
+    'ordering exercises require items and correctOrder.'
+  ].join('\n');
+}
+
+function getCourseSchemaForPrompt(): string {
+  return JSON.stringify(COURSE_SCHEMA, null, 2);
+}
+
 function buildCourseGenerationPrompt(
   sourceMaterial: string,
   options: {
     optionalTitle?: string;
-    difficulty: Difficulty;
-    courseStyle: CourseStyle;
-    lessonLength: LessonLength;
   }
 ): string {
-  const titleInstruction = options.optionalTitle
-    ? `Use this course title unless it clearly conflicts with the material: ${options.optionalTitle}`
-    : 'Create a concise course title based only on the provided material.';
+  const providedTitle = options.optionalTitle?.trim() || 'Create a concise, learner-friendly course title from the provided source material.';
 
-  return `You are an expert instructional designer. Transform the provided source material into an AdoLearn course: a short, interactive, Duolingo-style learning path.
+  return `You are an expert instructional designer creating an interactive AdoLearn course.
 
-Critical rules:
-- Use only the provided source material.
-- Do not invent unsupported facts.
-- Return valid JSON only. No markdown, comments, or extra prose.
-- Keep lessons short, interactive, and focused.
-- Include sections, units, lessons, exercises, explanations, hints, learning objectives, key concepts, review lessons, and final challenges.
-- Prefer 2 sections, each with 2 units, each unit with 2 to 3 lessons.
-- Include at least one review lesson and one final_challenge lesson.
-- Include 5 exercises per lesson when possible.
-- Exercise types may include multiple_choice, true_false, matching, ordering, and flashcard. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises.
-- For matching, create term-to-definition pairs: pair.left is the term and pair.right is the definition from the source.
+Transform the provided source material into a short, structured, playful, bite-sized course.
 
-Course settings:
-- ${titleInstruction}
-- Difficulty: ${options.difficulty}
-- Course style: ${options.courseStyle}
-- Lesson length: ${options.lessonLength}
+Rules:
 
-Return one JSON object matching this shape:
-{
-  "title": "string",
-  "description": "string",
-  "sourceMaterialPreview": "string",
-  "difficulty": "Auto | Beginner | Intermediate | Advanced",
-  "style": "Exam prep | Quick overview | Deep learning | Flashcard-heavy",
-  "estimatedTotalMinutes": 60,
-  "keyConcepts": ["string"],
-  "sections": [
-    {
-      "title": "string",
-      "description": "string",
-      "units": [
-        {
-          "title": "string",
-          "description": "string",
-          "lessons": [
-            {
-              "title": "string",
-              "type": "standard | review | final_challenge",
-              "estimatedMinutes": 5,
-              "learningObjectives": ["string"],
-              "summary": "string",
-              "exercises": [
-                {
-                  "type": "multiple_choice",
-                  "prompt": "string",
-                  "choices": [
-                    { "id": "a", "text": "string", "isCorrect": true },
-                    { "id": "b", "text": "string", "isCorrect": false }
-                  ],
-                  "answer": "string",
-                  "acceptedAnswers": ["string"],
-                  "explanation": "string",
-                  "hint": "string",
-                  "sourceReference": "string",
-                  "concept": "string"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+Use only the source material. Do not invent facts, examples, claims, dates, stats, citations, or definitions.
+Leave out unsupported details or generalize only when source-grounded.
+Return valid JSON only, with no markdown, code fences, or commentary.
+Return one top-level Course object directly, not wrapped in a course property.
+Match the AdoLearn Course type and schema contract below.
+
+Course title: ${providedTitle}
+
+Course structure:
+
+About 2 sections
+About 2 units per section
+About 3 lessons per unit
+About 5 exercises per lesson
+Include course key concepts, lesson objectives, review lessons, final challenges, explanations, and hints.
+
+Lesson exercises:
+
+Use a mix of multiple_choice, true_false, matching, and ordering.
+Do not use short_answer, fill_blank, scenario, explain_concept, or other typed/written-answer exercises.
+Each exercise should include prompt, explanation, hint, and concept when possible.
+multiple_choice: include choices and the correct answer.
+matching: use term-to-definition pairs only. left must be a short term/concept/person/process/vocabulary phrase; right must be a concise, distinct source-based definition.
+ordering: items must be objects like { "id": "step_1", "text": "..." }; correctOrder must list those same IDs.
+
+JSON contract summary:
+${getCourseJSONContractSummary()}
+
+Schema-like object:
+${getCourseSchemaForPrompt()}
 
 Source material:
 """
 ${sourceMaterial}
 """`;
 }
-
 function extractResponseText(payload: OpenAIResponsePayload): string {
   if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim();
@@ -582,10 +524,7 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
   }
 
   const prompt = buildCourseGenerationPrompt(sourceMaterial, {
-    optionalTitle: getOptionalCleanString(requestBody.optionalTitle),
-    difficulty: getDifficulty(requestBody.difficulty),
-    courseStyle: getCourseStyle(requestBody.courseStyle),
-    lessonLength: getLessonLength(requestBody.lessonLength)
+    optionalTitle: getOptionalCleanString(requestBody.optionalTitle)
   });
 
   try {

@@ -280,7 +280,7 @@ export function SettingsPage() {
       <PageCard
         eyebrow="Settings"
         title="Control AdoLearn locally"
-        description="Choose how AdoLearn generates courses, looks, and manages saved data on this device."
+        description="Choose how AdoLearn looks and manages saved data on this device."
       >
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100">
@@ -445,8 +445,6 @@ export function SettingsPage() {
                     {selectedCourse.description || 'No description saved.'}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-black text-slate-600">
-                    <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.difficulty}</span>
-                    <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.style}</span>
                     <span className="rounded-full bg-slate-100 px-3 py-1">
                       {getCourseLessonCount(selectedCourse)} lessons
                     </span>

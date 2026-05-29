@@ -16,7 +16,6 @@ import type {
   Section,
   Unit
 } from '../types/course';
-import type { CourseStyle, Difficulty, LessonLength } from '../types/settings';
 
 const SOURCE_PREVIEW_LENGTH = 500;
 const PASSING_CONTEXT_EXCERPT_LENGTH = 180;
@@ -75,25 +74,16 @@ function extractKeyConcepts(sourceMaterial: string): string[] {
   return Array.from(new Set([...extractedConcepts, ...FALLBACK_KEY_CONCEPTS])).slice(0, 8);
 }
 
-function getMinutesForLesson(lessonLength: LessonLength, lessonType: LessonType): number {
-  const baseMinutesByLength: Record<LessonLength, number> = {
-    Short: 5,
-    Medium: 8,
-    Long: 12
-  };
-
+function getMinutesForLesson(lessonType: LessonType): number {
+  const baseMinutes = 8;
   const challengeBonus = lessonType === 'final_challenge' ? 4 : 0;
   const reviewBonus = lessonType === 'review' ? 2 : 0;
 
-  return baseMinutesByLength[lessonLength] + challengeBonus + reviewBonus;
+  return baseMinutes + challengeBonus + reviewBonus;
 }
 
-function getCourseDescription(
-  sourcePreview: string,
-  difficulty: Difficulty,
-  courseStyle: CourseStyle
-): string {
-  return `A ${difficulty.toLowerCase()} ${courseStyle.toLowerCase()} course that turns the pasted material into short lessons, practice questions, and review checkpoints. Preview: ${sourcePreview}`;
+function getCourseDescription(sourcePreview: string): string {
+  return `A course that turns the pasted material into short lessons, practice questions, and review checkpoints. Preview: ${sourcePreview}`;
 }
 
 function getLessonType(globalLessonIndex: number): LessonType {
@@ -150,17 +140,6 @@ function createExerciseSet(
     'Treat all details as equally important.'
   ];
 
-  const flashcardExercise: Exercise = {
-    id: createId('exercise'),
-    type: 'flashcard',
-    prompt: `Flashcard front: What should you remember about ${concept}?`,
-    answer: `${concept} is one of the important ideas to identify, explain, and revisit while studying this material.`,
-    acceptedAnswers: [concept.toLowerCase()],
-    explanation: `Flashcards are useful for quick recall. This one helps you remember that ${concept.toLowerCase()} should be connected to the bigger lesson, not memorized in isolation.`,
-    hint: 'Say the idea in one simple sentence.',
-    sourceReference,
-    concept
-  };
 
   const conceptCheckExercise: Exercise = {
     id: createId('exercise'),
@@ -297,9 +276,9 @@ function createExerciseSet(
   ];
 
   const extensionSets: Exercise[][] = [
-    [flashcardExercise, conceptCheckExercise],
     [matchingExercise, conceptCheckExercise],
-    [orderingExercise, flashcardExercise],
+    [orderingExercise, conceptCheckExercise],
+    [matchingExercise, orderingExercise],
     [scenarioExercise, explainConceptExercise]
   ];
 
@@ -311,7 +290,6 @@ function createLesson(
   blueprintSummary: string,
   blueprintFocus: string,
   globalLessonIndex: number,
-  lessonLength: LessonLength,
   keyConcepts: string[],
   sourcePreview: string
 ): Lesson {
@@ -323,7 +301,7 @@ function createLesson(
     id: createId('lesson'),
     title: blueprintTitle,
     type: lessonType,
-    estimatedMinutes: getMinutesForLesson(lessonLength, lessonType),
+    estimatedMinutes: getMinutesForLesson(lessonType),
     learningObjectives: [
       `Identify the role of ${concept.toLowerCase()} in the source material.`,
       `Answer practice questions about ${concept.toLowerCase()} with confidence.`,
@@ -336,8 +314,7 @@ function createLesson(
 
 function createSections(
   keyConcepts: string[],
-  sourcePreview: string,
-  lessonLength: LessonLength
+  sourcePreview: string
 ): Section[] {
   let globalLessonIndex = 0;
 
@@ -350,7 +327,6 @@ function createSections(
           lessonBlueprint.summary,
           lessonBlueprint.focus,
           globalLessonIndex,
-          lessonLength,
           keyConcepts,
           sourcePreview
         );
@@ -389,25 +365,20 @@ function calculateEstimatedTotalMinutes(sections: Section[]): number {
 export function generateMockCourse({
   sourceMaterial,
   optionalTitle,
-  difficulty,
-  courseStyle,
-  lessonLength
 }: MockCourseGeneratorOptions): Course {
   const now = new Date().toISOString();
   const sourcePreview = getSourcePreview(sourceMaterial);
   const keyConcepts = extractKeyConcepts(sourceMaterial);
-  const sections = createSections(keyConcepts, sourcePreview, lessonLength);
+  const sections = createSections(keyConcepts, sourcePreview);
   const title = optionalTitle?.trim() || MOCK_COURSE_TITLE;
 
   return {
     id: createId('course'),
     title,
-    description: getCourseDescription(sourcePreview, difficulty, courseStyle),
+    description: getCourseDescription(sourcePreview),
     sourceMaterialPreview: sourcePreview,
     createdAt: now,
     updatedAt: now,
-    difficulty,
-    style: courseStyle,
     estimatedTotalMinutes: calculateEstimatedTotalMinutes(sections),
     sections,
     keyConcepts
@@ -416,17 +387,11 @@ export function generateMockCourse({
 
 export function generateMockCourseFromValues(
   sourceMaterial: string,
-  optionalTitle: string | undefined,
-  difficulty: Difficulty,
-  courseStyle: CourseStyle,
-  lessonLength: LessonLength
+  optionalTitle?: string
 ): Course {
   return generateMockCourse({
     sourceMaterial,
-    optionalTitle,
-    difficulty,
-    courseStyle,
-    lessonLength
+    optionalTitle
   });
 }
 
@@ -447,7 +412,6 @@ export function getExerciseTypeCounts(course: Course): Record<ExerciseType, numb
     'fill_blank',
     'matching',
     'ordering',
-        'flashcard',
     'scenario',
     'explain_concept'
   ];

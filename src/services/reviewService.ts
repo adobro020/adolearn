@@ -91,7 +91,7 @@ export function getReviewCandidates(scopeCourseId?: string | null): ReviewSource
   const weakConcepts = getCourseWeakConcepts(course.id);
 
   return getAllLessons(course).flatMap((lesson, lessonIndex) =>
-    lesson.exercises.filter((exercise) => exercise.type !== 'flashcard').map((exercise, exerciseIndex) => {
+    lesson.exercises.map((exercise, exerciseIndex) => {
       const weakMisses = exercise.concept
         ? weakConcepts.find((weakConcept) => weakConcept.concept === exercise.concept)?.misses ?? 0
         : 0;

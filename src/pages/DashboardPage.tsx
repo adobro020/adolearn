@@ -123,14 +123,10 @@ function CourseCard({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
           <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-            <p className="font-bold text-slate-500">Difficulty</p>
-            <p className="mt-1 font-black text-slate-900">{course.difficulty}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-            <p className="font-bold text-slate-500">Style</p>
-            <p className="mt-1 font-black text-slate-900">{course.style}</p>
+            <p className="font-bold text-slate-500">Lessons</p>
+            <p className="mt-1 font-black text-slate-900">{lessonCount}</p>
           </div>
           <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
             <p className="font-bold text-slate-500">Time</p>
@@ -272,7 +268,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
         />
         <NewUserFeatureCard
           title="Practice that sticks"
-          description="AdoLearn adds recall, matching, ordering, and flashcards to help ideas become long-term knowledge."
+          description="AdoLearn adds recall, matching, and ordering practice to help ideas become long-term knowledge."
           imageSrc={ROBOT_GRAPHICS.audio}
           imageAlt="Robot reviewing study notes"
         />

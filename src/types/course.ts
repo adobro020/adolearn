@@ -1,5 +1,3 @@
-import type { CourseStyle, Difficulty } from './settings';
-
 export type ISODateString = string;
 
 export type LessonType = 'standard' | 'review' | 'final_challenge';
@@ -10,7 +8,6 @@ export type ExerciseType =
   | 'fill_blank'
   | 'matching'
   | 'ordering'
-  | 'flashcard'
   | 'scenario'
   | 'explain_concept';
 
@@ -21,12 +18,9 @@ export interface Course {
   sourceMaterialPreview: string;
   createdAt: ISODateString;
   updatedAt: ISODateString;
-  difficulty: Difficulty;
-  style: CourseStyle;
   estimatedTotalMinutes: number;
   sections: Section[];
   keyConcepts: string[];
-  flashcards?: Exercise[];
 }
 
 export interface Section {

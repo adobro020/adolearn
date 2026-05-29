@@ -9,7 +9,7 @@ import { initializeCourseProgress } from '../services/progressService';
 import { getSettings } from '../services/settingsService';
 import { isStorageAvailable } from '../services/storageService';
 import type { Course } from '../types/course';
-import type { AppSettings, CourseStyle, Difficulty, LessonLength } from '../types/settings';
+import type { AppSettings } from '../types/settings';
 import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 import { classNames } from '../utils/classNames';
 
@@ -22,14 +22,6 @@ interface GenerationStep {
   detail: string;
 }
 
-const DIFFICULTY_OPTIONS: Difficulty[] = ['Auto', 'Beginner', 'Intermediate', 'Advanced'];
-const COURSE_STYLE_OPTIONS: CourseStyle[] = [
-  'Exam prep',
-  'Quick overview',
-  'Deep learning',
-  'Flashcard-heavy'
-];
-const LESSON_LENGTH_OPTIONS: LessonLength[] = ['Short', 'Medium', 'Long'];
 
 const MINIMUM_RECOMMENDED_CHARACTERS = 180;
 const BROWSER_STORAGE_COURSE_WARNING_BYTES = 4_500_000;
@@ -88,38 +80,6 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-function SelectField<T extends string>({
-  id,
-  label,
-  value,
-  options,
-  onChange
-}: {
-  id: string;
-  label: string;
-  value: T;
-  options: T[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <label htmlFor={id} className="block">
-      <span className="text-sm font-black text-slate-700">{label}</span>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value as T)}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 function getGenerationModeLabel(settings: AppSettings): string {
   return settings.modelName || 'AI';
 }
@@ -129,17 +89,10 @@ function getVisibleStepIndex(activeStepIndex: number): number {
 }
 
 function FullScreenGenerationOverlay({
-  activeStepIndex,
-  progressValue,
   isSuccess
 }: {
-  activeStepIndex: number;
-  progressValue: number;
   isSuccess: boolean;
 }) {
-  const visibleStepIndex = getVisibleStepIndex(activeStepIndex);
-  const activeStep = GENERATION_STEPS[visibleStepIndex];
-  const displayProgress = Math.round(progressValue);
   const headline = isSuccess ? 'Course ready' : 'Building your course';
 
   return (
@@ -149,40 +102,37 @@ function FullScreenGenerationOverlay({
       aria-live="polite"
       aria-busy={!isSuccess}
     >
-      <div className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] bg-white p-6 text-center shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-slate-950 dark:ring-zinc-800 sm:p-10">
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-[2.5rem] bg-white p-6 text-center shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-slate-950 dark:ring-zinc-800 sm:p-10">
         <div className="absolute -left-14 top-10 h-40 w-40 rounded-full bg-emerald-200/60 blur-3xl" aria-hidden="true" />
         <div className="absolute -right-8 bottom-0 h-56 w-56 rounded-full bg-sky-200/60 blur-3xl" aria-hidden="true" />
 
-        <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-6">
+        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-6">
           <img
             src={isSuccess ? ROBOT_GRAPHICS.celebration : ROBOT_GRAPHICS.workflow}
             alt={isSuccess ? 'Robot celebrating a completed course' : 'Robot assembling a course workflow'}
             className="h-64 w-full object-contain sm:h-80"
           />
 
-          <div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
-              {headline}
-            </h2>
-            <p className="mt-3 text-sm font-bold leading-6 text-slate-500 dark:text-zinc-300">
-              {isSuccess ? 'Opening your course map now.' : activeStep.label}
-            </p>
-          </div>
+          <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+            {headline}
+          </h2>
 
-          <div className="w-full max-w-xl">
-            <ProgressBar
-              value={displayProgress}
-              label="Course generation progress"
-              tone={isSuccess ? 'emerald' : 'sky'}
-              size="lg"
+          {isSuccess ? (
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-3xl font-black text-white shadow-lg shadow-emerald-200" aria-hidden="true">
+              ✓
+            </div>
+          ) : (
+            <div
+              className="h-16 w-16 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"
+              aria-label="Loading"
+              role="progressbar"
             />
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
 function getCourseByteSize(course: Course): number {
   return new Blob([JSON.stringify(course)]).size;
 }
@@ -228,9 +178,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   const settings = useMemo(() => getSettings(), []);
   const [courseTitle, setCourseTitle] = useState('');
   const [sourceMaterial, setSourceMaterial] = useState('');
-  const [difficulty, setDifficulty] = useState<Difficulty>(settings.preferredDifficulty);
-  const [courseStyle, setCourseStyle] = useState<CourseStyle>(settings.preferredCourseStyle);
-  const [lessonLength, setLessonLength] = useState<LessonLength>(settings.preferredLessonLength);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeStepIndex, setActiveStepIndex] = useState(-1);
@@ -290,9 +237,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   function handleClear() {
     setCourseTitle('');
     setSourceMaterial('');
-    setDifficulty(settings.preferredDifficulty);
-    setCourseStyle(settings.preferredCourseStyle);
-    setLessonLength(settings.preferredLessonLength);
     setUploadedFileNames([]);
     resetMessages();
     setActiveStepIndex(-1);
@@ -413,9 +357,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     const result = await generateCourseWithAI({
       sourceMaterial: trimmedSourceMaterial,
       optionalTitle: courseTitle,
-      difficulty,
-      courseStyle,
-      lessonLength,
       modelName: currentSettings.modelName
     });
 
@@ -491,11 +432,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   return (
     <div className="space-y-6">
       {isGenerating || successMessage ? (
-        <FullScreenGenerationOverlay
-          activeStepIndex={activeStepIndex}
-          progressValue={generationProgress}
-          isSuccess={Boolean(successMessage)}
-        />
+        <FullScreenGenerationOverlay isSuccess={Boolean(successMessage)} />
       ) : null}
 
       <PageCard
@@ -545,8 +482,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
             </div>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="space-y-5">
+          <div className="space-y-5">
               <label htmlFor="course-title" className="block">
                 <span className="text-sm font-black text-slate-700">Course title</span>
                 <input
@@ -637,48 +573,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                   placeholder={hasUploadedFiles ? 'Remove the uploaded file to paste material manually.' : 'Paste course notes, an article, a podcast transcript, lecture notes, or a study guide here...'}
                 />
               </label>
-            </div>
-
-            <aside className="relative overflow-hidden rounded-[1.75rem] bg-slate-50 p-4 ring-1 ring-slate-200 sm:p-5">
-              <div className="absolute -right-8 top-1 h-28 w-28 rounded-full bg-emerald-100/70 blur-2xl" aria-hidden="true" />
-              <div className="relative">
-                <div className="mx-auto max-w-sm">
-                  <img src={ROBOT_GRAPHICS.teacher} alt="Robot teaching at a whiteboard" className="mx-auto h-52 w-full object-contain" />
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
-                    Course settings
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Adjust learning defaults any time in Settings.
-                  </p>
-                </div>
-
-                <div className="mt-5 space-y-4">
-                  <SelectField
-                    id="difficulty"
-                    label="Difficulty"
-                    value={difficulty}
-                    options={DIFFICULTY_OPTIONS}
-                    onChange={setDifficulty}
-                  />
-                  <SelectField
-                    id="course-style"
-                    label="Course style"
-                    value={courseStyle}
-                    options={COURSE_STYLE_OPTIONS}
-                    onChange={setCourseStyle}
-                  />
-                  <SelectField
-                    id="lesson-length"
-                    label="Lesson length"
-                    value={lessonLength}
-                    options={LESSON_LENGTH_OPTIONS}
-                    onChange={setLessonLength}
-                  />
-                </div>
-              </div>
-            </aside>
           </div>
 
           {error ? (

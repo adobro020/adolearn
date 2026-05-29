@@ -13,7 +13,6 @@ import type {
   SourceReference,
   Unit
 } from '../types/course';
-import type { CourseStyle, Difficulty } from '../types/settings';
 import { removeItem, safeGetJSON, safeSetJSON } from './storageService';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -112,8 +111,7 @@ function normalizeExercise(value: unknown): Exercise | null {
     'multiple_choice',
     'true_false',
     'matching',
-    'ordering',
-    'flashcard'
+    'ordering'
   ];
 
   const id = asString(value.id);
@@ -235,20 +233,7 @@ export function normalizeCourse(value: unknown): Course | null {
     return null;
   }
 
-  const difficultyValues: readonly Difficulty[] = [
-    'Auto',
-    'Beginner',
-    'Intermediate',
-    'Advanced'
-  ];
-  const courseStyleValues: readonly CourseStyle[] = [
-    'Exam prep',
-    'Quick overview',
-    'Deep learning',
-    'Flashcard-heavy'
-  ];
-
-  const id = asString(value.id);
+    const id = asString(value.id);
   const title = asString(value.title);
 
   if (!id || !title) {
@@ -266,8 +251,6 @@ export function normalizeCourse(value: unknown): Course | null {
     sourceMaterialPreview: asString(value.sourceMaterialPreview),
     createdAt: asString(value.createdAt, new Date().toISOString()),
     updatedAt: asString(value.updatedAt, new Date().toISOString()),
-    difficulty: isOneOf(value.difficulty, difficultyValues) ? value.difficulty : 'Auto',
-    style: isOneOf(value.style, courseStyleValues) ? value.style : 'Quick overview',
     estimatedTotalMinutes: Math.max(0, asNumber(value.estimatedTotalMinutes, 0)),
     sections,
     keyConcepts: asStringArray(value.keyConcepts)

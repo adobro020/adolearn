@@ -1,11 +1,6 @@
-import type { CourseStyle, Difficulty, LessonLength } from '../types/settings';
-
 export interface MockCourseGeneratorOptions {
   sourceMaterial: string;
   optionalTitle?: string;
-  difficulty: Difficulty;
-  courseStyle: CourseStyle;
-  lessonLength: LessonLength;
 }
 
 export interface MockLessonBlueprint {

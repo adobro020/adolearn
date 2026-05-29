@@ -336,8 +336,6 @@ export function LessonPlayerPage({
         sourceMaterialPreview: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        difficulty: 'Auto',
-        style: 'Quick overview',
         estimatedTotalMinutes: reviewSession.lesson.estimatedMinutes,
         sections: [],
         keyConcepts: reviewSession.weakConcepts.map((concept) => concept.concept)
@@ -359,13 +357,12 @@ export function LessonPlayerPage({
   const [matchingAnswers, setMatchingAnswers] = useState<Record<string, string>>({});
   const [selectedMatchTermId, setSelectedMatchTermId] = useState<string | null>(null);
   const [orderedItemIds, setOrderedItemIds] = useState<string[]>([]);
-  const [flashcardRevealed, setFlashcardRevealed] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [attemptAnswers, setAttemptAnswers] = useState<LessonAttemptAnswer[]>([]);
   const [savedAttempt, setSavedAttempt] = useState<LessonAttemptSaveResult | null>(null);
   const [showEndScreen, setShowEndScreen] = useState(false);
   const practiceExercises = useMemo(
-    () => lesson?.exercises.filter((exercise) => exercise.type !== 'flashcard') ?? [],
+    () => lesson?.exercises ?? [],
     [lesson]
   );
   const currentExercise = practiceExercises[currentExerciseIndex] ?? null;
@@ -451,7 +448,6 @@ export function LessonPlayerPage({
     setMatchingAnswers({});
     setSelectedMatchTermId(null);
     setOrderedItemIds(getInitialOrderingIds(lesson?.exercises[currentExerciseIndex + 1] ?? null));
-    setFlashcardRevealed(false);
     setFeedback(null);
   }
 
@@ -537,28 +533,6 @@ export function LessonPlayerPage({
     });
   }
 
-  function handleFlashcardSelfGrade(isCorrect: boolean) {
-    if (!currentExercise || feedback || currentExercise.type !== 'flashcard') {
-      return;
-    }
-
-    recordAnswer(
-      currentExercise,
-      isCorrect,
-      isCorrect ? 'Self-graded correct' : 'Self-graded incorrect'
-    );
-    if (isCorrect) {
-      playCorrectSound();
-    } else {
-      playIncorrectSound();
-    }
-    setFeedback({
-      isCorrect,
-      message: isCorrect
-        ? 'Great recall — count this flashcard as correct.'
-        : 'Good review moment — count this flashcard as incorrect and revisit the explanation.'
-    });
-  }
 
   function finishLesson() {
     if (!course || !lesson) {
@@ -906,50 +880,6 @@ export function LessonPlayerPage({
       );
     }
 
-    if (exercise.type === 'flashcard') {
-      return (
-        <div className="space-y-4">
-          <div className="rounded-[2rem] bg-white p-5 text-center ring-2 ring-slate-200 sm:p-7">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-              Flashcard
-            </p>
-            <p className="mt-4 text-lg font-black leading-8 text-slate-950 sm:text-xl">
-              {flashcardRevealed ? getCorrectAnswerLabel(exercise) : 'Think of your answer, then reveal the card.'}
-            </p>
-          </div>
-
-          {!flashcardRevealed ? (
-            <button
-              type="button"
-              onClick={() => { playClickSound(); setFlashcardRevealed(true); }}
-              className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              Reveal answer
-            </button>
-          ) : feedback ? null : (
-            <div className="space-y-3">
-              <p className="text-center text-sm font-black text-slate-600">Did you know this?</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleFlashcardSelfGrade(false)}
-                  className="rounded-2xl bg-rose-50 px-4 py-4 text-sm font-black text-rose-700 ring-1 ring-rose-100 transition hover:-translate-y-0.5"
-                >
-                  Incorrect
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFlashcardSelfGrade(true)}
-                  className="rounded-2xl bg-emerald-500 px-4 py-4 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5"
-                >
-                  Correct
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
 
     return (
       <div className="rounded-3xl bg-amber-50 p-5 text-sm font-bold leading-6 text-amber-800 ring-1 ring-amber-100">
@@ -1044,7 +974,7 @@ export function LessonPlayerPage({
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl flex-col items-center justify-center text-center">
           <h1 className="text-4xl font-black tracking-tight text-slate-950 dark:text-white">No exercises yet</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-zinc-300">
-This lesson does not include supported practice questions. Flashcards for this course live in the Flashcards section on the course page.
+This lesson does not include supported practice questions yet.
           </p>
         </div>
       </section>

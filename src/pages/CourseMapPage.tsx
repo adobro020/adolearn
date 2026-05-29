@@ -4,7 +4,7 @@ import { NoticeBanner, ProgressBar, ProgressRing } from '../components/Polish';
 import { getCourseById } from '../services/courseService';
 import { getCourseProgress, initializeCourseProgress, unlockLesson } from '../services/progressService';
 import { getReviewSummary } from '../services/reviewService';
-import type { Course, Exercise, Lesson } from '../types/course';
+import type { Course, Lesson } from '../types/course';
 import type { CourseProgress } from '../types/progress';
 import { classNames } from '../utils/classNames';
 import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
@@ -29,25 +29,8 @@ function getAllLessons(course: Course): Lesson[] {
 }
 
 
-function getPracticeExercises(lesson: Lesson): Exercise[] {
-  return lesson.exercises.filter((exercise) => exercise.type !== 'flashcard');
-}
-
-function getCourseFlashcards(course: Course): Exercise[] {
-  const topLevelFlashcards = course.flashcards ?? [];
-  const lessonFlashcards = getAllLessons(course).flatMap((lesson) =>
-    lesson.exercises.filter((exercise) => exercise.type === 'flashcard')
-  );
-
-  const seenIds = new Set<string>();
-  return [...topLevelFlashcards, ...lessonFlashcards].filter((exercise) => {
-    if (seenIds.has(exercise.id)) {
-      return false;
-    }
-
-    seenIds.add(exercise.id);
-    return true;
-  });
+function getPracticeExerciseCount(lesson: Lesson): number {
+  return lesson.exercises.length;
 }
 
 function getLessonCount(course: Course): number {
@@ -226,7 +209,7 @@ function LessonNode({
           {lesson.summary || 'A bite-sized lesson with quick practice exercises.'}
         </p>
         <p className="mt-3 text-sm font-black text-slate-500">
-          {lesson.estimatedMinutes} min | {getPracticeExercises(lesson).length} questions
+          {lesson.estimatedMinutes} min | {getPracticeExerciseCount(lesson)} questions
         </p>
       </button>
     </li>
@@ -280,7 +263,6 @@ export function CourseMapPage({
     [course, progress]
   );
   const reviewSummary = useMemo(() => (course ? getReviewSummary(course.id) : null), [course, progress]);
-  const courseFlashcards = useMemo(() => (course ? getCourseFlashcards(course) : []), [course]);
 
   if (!course) {
     return (
@@ -359,39 +341,6 @@ export function CourseMapPage({
             </div>
             <ProgressBar value={percentComplete} label="Course path progress" size="lg" tone="violet" />
           </div>
-
-          {courseFlashcards.length > 0 ? (
-            <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100 sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">
-                    Course flashcards
-                  </p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-                    Review {courseFlashcards.length} quick-recall cards separately from lessons.
-                  </p>
-                </div>
-                <span className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200">
-                  {courseFlashcards.length} cards
-                </span>
-              </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                {courseFlashcards.map((flashcard, index) => (
-                  <details key={flashcard.id} className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
-                    <summary className="cursor-pointer list-none text-sm font-black text-slate-950">
-                      Card {index + 1}: {flashcard.prompt}
-                    </summary>
-                    <p className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-700 ring-1 ring-slate-100">
-                      {Array.isArray(flashcard.answer) ? flashcard.answer.join(', ') : String(flashcard.answer ?? flashcard.acceptedAnswers?.[0] ?? 'Review the source material.')}
-                    </p>
-                    {flashcard.explanation ? (
-                      <p className="mt-3 text-xs font-bold leading-5 text-slate-500">{flashcard.explanation}</p>
-                    ) : null}
-                  </details>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:p-6">
             <div className="absolute -right-6 bottom-0 hidden md:block" aria-hidden="true">

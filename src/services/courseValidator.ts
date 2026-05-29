@@ -5,8 +5,6 @@ import {
   LESSON_REQUIRED_FIELDS,
   SECTION_REQUIRED_FIELDS,
   UNIT_REQUIRED_FIELDS,
-  VALID_COURSE_STYLES,
-  VALID_DIFFICULTIES,
   VALID_EXERCISE_TYPES,
   VALID_LESSON_TYPES
 } from './schemaService';
@@ -368,13 +366,6 @@ export function validateCourse(candidate: unknown, options: CourseValidationOpti
   validateStringField(candidate, 'sourceMaterialPreview', 'course', errors, options, true);
   validateStringArray(candidate.keyConcepts, 'course.keyConcepts', errors, options, true);
 
-  if ('difficulty' in candidate && !VALID_DIFFICULTIES.includes(candidate.difficulty as Course['difficulty'])) {
-    errors.push(`course.difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}.`);
-  }
-
-  if ('style' in candidate && !VALID_COURSE_STYLES.includes(candidate.style as Course['style'])) {
-    errors.push(`course.style must be one of: ${VALID_COURSE_STYLES.join(', ')}.`);
-  }
 
   if ('estimatedTotalMinutes' in candidate && !isNumber(candidate.estimatedTotalMinutes)) {
     errors.push('course.estimatedTotalMinutes must be a number.');

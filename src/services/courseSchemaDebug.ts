@@ -13,8 +13,6 @@ export const MOCK_AI_COURSE_JSON = {
   title: 'Sample Source Learning Path',
   description: 'A short course generated from a tiny mock source excerpt.',
   sourceMaterialPreview: 'Photosynthesis converts light energy into chemical energy stored in glucose.',
-  difficulty: 'Beginner',
-  style: 'Quick overview',
   keyConcepts: ['Photosynthesis', 'Chlorophyll', 'Glucose'],
   sections: [
     {
@@ -80,8 +78,6 @@ export function runCourseSchemaDebugCheck(mockAIJSON: unknown = MOCK_AI_COURSE_J
   }
 
   const normalizedCourse = normalizeCourseFromAIJSON(mockAIJSON, {
-    fallbackDifficulty: 'Beginner',
-    fallbackCourseStyle: 'Quick overview',
     sourceMaterialPreview: 'Photosynthesis converts light energy into chemical energy stored in glucose.'
   });
   const normalizedValidation = validateCourse(normalizedCourse);

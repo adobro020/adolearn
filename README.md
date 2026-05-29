@@ -102,7 +102,7 @@ Courses, lesson progress, XP, streaks, weak concepts, review attempts, imports, 
 
 The Settings page supports:
 
-- Model name setting, defaulting to `gpt-5-nano`
+- Model name setting, defaulting to `gpt-5.4-nano`
 - Generation mode selection:
   - Mock mode
   - Server proxy mode
@@ -157,11 +157,12 @@ The frontend never sends API secrets, environment variable values, or secret tok
 
 Supported model names:
 
+- `gpt-5.4-nano`
 - `gpt-5-nano`
 - `gpt-5-mini`
 - `gpt-5`
 
-Unsupported model names fall back to `gpt-5-nano`.
+Unsupported model names fall back to `gpt-5.4-nano`.
 
 The API route includes:
 
@@ -288,7 +289,7 @@ Before deploying or continuing development, test:
 - Refresh Lesson Player
 - Create course
 - Complete lesson
-- Confirm `browser storage` persistss after refresh
+- Confirm `browser storage` persists after refresh
 - Export data
 - Import data
 - Use mock generation

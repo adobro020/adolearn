@@ -1,18 +1,6 @@
-import type { CourseStyle, Difficulty, LessonLength } from '../types/settings';
 import type { ExerciseType, LessonType } from '../types/course';
 
 export const COURSE_SCHEMA_VERSION = 'adolearn-course-v1';
-
-export const VALID_DIFFICULTIES: Difficulty[] = ['Auto', 'Beginner', 'Intermediate', 'Advanced'];
-
-export const VALID_COURSE_STYLES: CourseStyle[] = [
-  'Exam prep',
-  'Quick overview',
-  'Deep learning',
-  'Flashcard-heavy'
-];
-
-export const VALID_LESSON_LENGTHS: LessonLength[] = ['Short', 'Medium', 'Long'];
 
 export const VALID_LESSON_TYPES: LessonType[] = ['standard', 'review', 'final_challenge'];
 
@@ -20,8 +8,7 @@ export const VALID_EXERCISE_TYPES: ExerciseType[] = [
   'multiple_choice',
   'true_false',
   'matching',
-  'ordering',
-  'flashcard'
+  'ordering'
 ];
 
 export const COURSE_REQUIRED_FIELDS = [
@@ -31,8 +18,6 @@ export const COURSE_REQUIRED_FIELDS = [
   'sourceMaterialPreview',
   'createdAt',
   'updatedAt',
-  'difficulty',
-  'style',
   'estimatedTotalMinutes',
   'sections',
   'keyConcepts'
@@ -62,11 +47,8 @@ export const ADOLEARN_COURSE_SCHEMA = {
     sourceMaterialPreview: 'string; short excerpt or summary of the provided source material only',
     createdAt: 'ISO date string, or omit only when a normalizer will add it',
     updatedAt: 'ISO date string, or omit only when a normalizer will add it',
-    difficulty: VALID_DIFFICULTIES,
-    style: VALID_COURSE_STYLES,
     estimatedTotalMinutes: 'number; sum of lesson estimates, or omit only when a normalizer will add it',
     keyConcepts: 'string[]; source-grounded concepts only',
-    flashcards: 'optional array of flashcard exercises displayed in the course flashcard section, not inside lessons',
     sections: [
       {
         id: 'string',
@@ -124,8 +106,7 @@ export function getCourseJSONContractSummary(): string {
     'Every exercise must include a prompt and an explanation.',
     'multiple_choice exercises require choices.',
     'matching exercises require pairs.',
-    'ordering exercises require items and correctOrder.',
-    'flashcard exercises should be used only for the course-level flashcard bank, not as lesson questions.'
+    'ordering exercises require items and correctOrder.'
   ].join('\n');
 }
 
@@ -133,7 +114,7 @@ export function getCourseJSONContractSummary(): string {
 export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: true,
-  required: ['title', 'description', 'difficulty', 'style', 'sections', 'keyConcepts'],
+  required: ['title', 'description', 'sections', 'keyConcepts'],
   properties: {
     id: { type: 'string' },
     title: { type: 'string' },
@@ -141,19 +122,10 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
     sourceMaterialPreview: { type: 'string' },
     createdAt: { type: 'string' },
     updatedAt: { type: 'string' },
-    difficulty: { type: 'string', enum: VALID_DIFFICULTIES },
-    style: { type: 'string', enum: VALID_COURSE_STYLES },
     estimatedTotalMinutes: { type: 'number' },
     keyConcepts: {
       type: 'array',
       items: { type: 'string' }
-    },
-    flashcards: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: true
-      }
     },
     sections: {
       type: 'array',

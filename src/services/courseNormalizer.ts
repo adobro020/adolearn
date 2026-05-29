@@ -12,13 +12,10 @@ import type {
   SourceReference,
   Unit
 } from '../types/course';
-import type { CourseStyle, Difficulty } from '../types/settings';
-import { VALID_COURSE_STYLES, VALID_DIFFICULTIES, VALID_EXERCISE_TYPES, VALID_LESSON_TYPES } from './schemaService';
+import { VALID_EXERCISE_TYPES, VALID_LESSON_TYPES } from './schemaService';
 
 export interface CourseNormalizationOptions {
   fallbackTitle?: string;
-  fallbackDifficulty?: Difficulty;
-  fallbackCourseStyle?: CourseStyle;
   sourceMaterialPreview?: string;
 }
 
@@ -84,20 +81,13 @@ function ensureUniqueId(value: unknown, prefix: string, seenIds: Set<string>): s
   return generatedId;
 }
 
-function normalizeDifficulty(value: unknown, fallback: Difficulty): Difficulty {
-  return VALID_DIFFICULTIES.includes(value as Difficulty) ? (value as Difficulty) : fallback;
-}
-
-function normalizeCourseStyle(value: unknown, fallback: CourseStyle): CourseStyle {
-  return VALID_COURSE_STYLES.includes(value as CourseStyle) ? (value as CourseStyle) : fallback;
-}
 
 function normalizeLessonType(value: unknown): LessonType {
   return VALID_LESSON_TYPES.includes(value as LessonType) ? (value as LessonType) : 'standard';
 }
 
 function normalizeExerciseType(value: unknown): ExerciseType {
-  return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'flashcard';
+  return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'multiple_choice';
 }
 
 function normalizeAnswer(value: unknown): ExerciseAnswer | undefined {
@@ -234,7 +224,6 @@ function getDefaultExplanation(exerciseType: ExerciseType): string {
     fill_blank: 'The blank should be filled with a key idea from the lesson.',
     matching: 'The correct matches connect terms to their meanings.',
     ordering: 'The correct order follows the logical sequence taught in the lesson.',
-    flashcard: 'This flashcard is meant to strengthen quick recall.',
     scenario: 'The scenario applies the lesson concept to a realistic situation.',
     explain_concept: 'A good explanation defines the concept and says why it matters.'
   };
@@ -317,27 +306,6 @@ function normalizeSection(value: unknown, index: number, seenIds: Set<string>): 
 }
 
 
-function extractFlashcardsFromSections(sections: Section[]): Exercise[] {
-  return sections.flatMap((section) =>
-    section.units.flatMap((unit) =>
-      unit.lessons.flatMap((lesson) => lesson.exercises.filter((exercise) => exercise.type === 'flashcard'))
-    )
-  );
-}
-
-function removeFlashcardsFromSections(sections: Section[]): Section[] {
-  return sections.map((section) => ({
-    ...section,
-    units: section.units.map((unit) => ({
-      ...unit,
-      lessons: unit.lessons.map((lesson) => ({
-        ...lesson,
-        exercises: lesson.exercises.filter((exercise) => exercise.type !== 'flashcard')
-      }))
-    }))
-  }));
-}
-
 function calculateEstimatedTotalMinutes(sections: Section[]): number {
   return sections.reduce(
     (sectionTotal, section) =>
@@ -360,13 +328,7 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
   const record = isRecord(candidate) ? candidate : {};
   const seenIds = new Set<string>();
   const sectionsSource = Array.isArray(record.sections) ? record.sections : [];
-  const sectionsWithFlashcards = sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds));
-  const topLevelFlashcardsSource = Array.isArray(record.flashcards) ? record.flashcards : [];
-  const topLevelFlashcards = topLevelFlashcardsSource
-    .map((exercise, exerciseIndex) => normalizeExercise({ ...(isRecord(exercise) ? exercise : {}), type: 'flashcard' }, exerciseIndex, seenIds))
-    .filter((exercise) => exercise.type === 'flashcard');
-  const flashcards = [...topLevelFlashcards, ...extractFlashcardsFromSections(sectionsWithFlashcards)];
-  const sections = removeFlashcardsFromSections(sectionsWithFlashcards);
+  const sections = sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds));
   const keyConcepts = normalizeStringArray(record.keyConcepts, ['Main idea', 'Key evidence', 'Review concept']);
   const estimatedTotalMinutes = Math.max(1, calculateEstimatedTotalMinutes(sections));
 
@@ -385,12 +347,9 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
     ),
     createdAt: typeof record.createdAt === 'string' ? record.createdAt : now,
     updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : now,
-    difficulty: normalizeDifficulty(record.difficulty, options.fallbackDifficulty ?? 'Auto'),
-    style: normalizeCourseStyle(record.style, options.fallbackCourseStyle ?? 'Quick overview'),
     estimatedTotalMinutes,
     sections,
-    keyConcepts,
-    flashcards
+    keyConcepts
   };
 
   return makeBrowserStorageSafe(normalizedCourse);
