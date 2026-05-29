@@ -8,7 +8,7 @@ import { LessonPlayerPage } from './pages/LessonPlayerPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { StudyTechniquePage } from './pages/StudyTechniquePage';
+import { StudyTechniquePage, getStudyTechniqueTitle } from './pages/StudyTechniquePage';
 import { getCourses } from './services/courseService';
 import { getSettings } from './services/settingsService';
 import type { AppSettings, ThemePreference } from './types/settings';
@@ -186,21 +186,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const courses = getCourses();
+    const selectedCourse = selectedCourseId ? courses.find((course) => course.id === selectedCourseId) : null;
+    const reviewCourse = selectedReviewCourseId ? courses.find((course) => course.id === selectedReviewCourseId) : null;
+    const selectedLesson = selectedCourse?.units
+      .flatMap((unit) => unit.sections)
+      .flatMap((section) => section.lessons)
+      .find((lesson) => lesson.id === selectedLessonId);
+
     const pageTitles: Record<AppRoutePage, string> = {
-      dashboard: 'Dashboard',
+      dashboard: courses.length === 0 ? 'Create Personalized Courses' : 'Dashboard',
       create: 'Create Course',
       settings: 'Settings',
-      courseMap: 'Course Map',
-      lessonPlayer: 'Lesson',
-      review: 'Review',
-      studyTechnique: 'Study Techniques',
+      courseMap: selectedCourse ? selectedCourse.title : 'Course Map',
+      lessonPlayer: selectedLesson ? selectedLesson.title : 'Lesson',
+      review: reviewCourse ? `${reviewCourse.title} Review` : 'Review',
+      studyTechnique: getStudyTechniqueTitle(selectedStudyTechniqueId),
       notFound: 'Page Not Found'
     };
 
-    const dashboardTitle = activePage === 'dashboard' && getCourses().length === 0 ? 'Create Personalized Courses' : pageTitles[activePage];
-    document.title = `${dashboardTitle} | AdoLearn`;
+    document.title = `${pageTitles[activePage]} | AdoLearn`;
     document.body.dataset.page = activePage;
-  }, [activePage]);
+  }, [activePage, selectedCourseId, selectedLessonId, selectedReviewCourseId, selectedStudyTechniqueId]);
 
   function openDashboard() {
     navigate('/');

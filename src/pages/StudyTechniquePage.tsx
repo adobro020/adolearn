@@ -16,7 +16,7 @@ interface StudyTechniqueContent {
   }>;
 }
 
-const TECHNIQUES: StudyTechniqueContent[] = [
+export const TECHNIQUES: StudyTechniqueContent[] = [
   {
     id: 'active-recall',
     title: 'Active Recall',
@@ -91,30 +91,34 @@ const TECHNIQUES: StudyTechniqueContent[] = [
   }
 ];
 
-function findTechnique(id: string | null): StudyTechniqueContent {
+export function findTechnique(id: string | null): StudyTechniqueContent {
   return TECHNIQUES.find((technique) => technique.id === id) ?? TECHNIQUES[0];
+}
+
+export function getStudyTechniqueTitle(id: string | null): string {
+  return findTechnique(id).title;
 }
 
 export function StudyTechniquePage({ techniqueId, onCreateCourse }: StudyTechniquePageProps) {
   const technique = findTechnique(techniqueId);
   return (
     <div className="space-y-8 pb-4">
-      <article className="max-w-4xl space-y-8">
-        <header className="space-y-3">
-          <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
+      <article className="mx-auto max-w-3xl space-y-7">
+        <header className="border-b border-slate-200/80 pb-6 dark:border-slate-800">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
             {technique.eyebrow}
           </p>
-          <h1 className="text-4xl font-black tracking-[-0.055em] text-slate-950 sm:text-5xl dark:text-white">
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl dark:text-white">
             {technique.title}
           </h1>
-          <p className="max-w-3xl text-lg font-semibold leading-8 text-slate-600 dark:text-slate-300">
+          <p className="mt-3 text-base font-semibold leading-7 text-slate-600 dark:text-slate-300 sm:text-lg sm:leading-8">
             {technique.summary}
           </p>
         </header>
 
         {technique.sections.map((section) => (
           <section key={section.title} className="space-y-3">
-            <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950 dark:text-white">{section.title}</h2>
+            <h2 className="text-xl font-black tracking-[-0.03em] text-slate-950 sm:text-2xl dark:text-white">{section.title}</h2>
             <p className="text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">{section.body}</p>
             <ul className="list-disc space-y-2 pl-6 text-base font-semibold leading-7 text-slate-700 dark:text-slate-200">
               {section.tips.map((tip) => (
