@@ -147,13 +147,18 @@ export default function App() {
     }
   }
 
+  const isLessonFullscreen = activePage === 'lessonPlayer';
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#d1fae5,_transparent_34rem),linear-gradient(180deg,_#f8fafc,_#eef2ff)] text-slate-950 transition-colors duration-300 dark:bg-black dark:text-slate-100">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 pb-28 md:px-6 md:py-6">
         <Header />
-        <BottomNav activePage={activePage} onPageChange={setActivePage} />
+        {!isLessonFullscreen ? <BottomNav activePage={activePage} onPageChange={setActivePage} /> : null}
 
-        <main className="mx-auto mt-6 w-full max-w-5xl flex-1" id="main-content">
+        <main
+          className={isLessonFullscreen ? 'mx-auto mt-4 w-full max-w-6xl flex-1' : 'mx-auto mt-6 w-full max-w-5xl flex-1'}
+          id="main-content"
+        >
           {renderPage()}
         </main>
       </div>

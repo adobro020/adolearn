@@ -13,6 +13,7 @@ import {
 import type { ReviewSession } from '../services/reviewService';
 import type { Course, Exercise, ExerciseAnswer, Lesson, MatchingPair, OrderingItem } from '../types/course';
 import { classNames } from '../utils/classNames';
+import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface LessonPlayerPageProps {
   courseId: string | null;
@@ -914,90 +915,100 @@ export function LessonPlayerPage({
     return (
       <div className="relative">
         <ConfettiBurst active={result.passed} />
-      <PageCard
-        eyebrow={isReviewMode ? 'Review complete' : 'Lesson complete'}
-        title={result.passed ? (isReviewMode ? 'Review session complete!' : 'You passed this lesson!') : 'Keep practicing'}
-        description={
-          isReviewMode
-            ? 'Review results were saved locally, review XP was awarded, and no course lessons were unlocked.'
-            : result.passed
-              ? 'Progress was saved locally, XP was awarded, and the next available lesson was unlocked.'
-              : 'This attempt was saved locally. Score 70% or higher to mark the lesson complete and unlock what comes next.'
-        }
-      >
-        <div className="space-y-6">
-          <div
-            className={classNames(
-              'relative overflow-hidden rounded-[2rem] p-6 text-center ring-1 motion-safe:animate-celebratory-pop',
-              result.passed
-                ? 'bg-gradient-to-br from-emerald-50 to-sky-50 ring-emerald-100'
-                : 'bg-gradient-to-br from-amber-50 to-orange-50 ring-amber-100'
-            )}
-          >
-            <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/70 blur-xl" />
-            <div className="relative">
-              <p className="text-5xl motion-safe:animate-bounce-soft" aria-hidden="true">
-                {result.passed ? '🎉' : '💪'}
-              </p>
-              <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-emerald-600">Score</p>
-              <p className="mt-2 text-6xl font-black tracking-tight text-slate-950">
-                <AnimatedNumber value={result.scorePercentage} suffix="%" />
-              </p>
-              <p className="mt-3 text-sm font-bold text-slate-600">
-                {result.passed ? 'Passed' : 'Needs retry'} · Passing score is {PASSING_PERCENTAGE}%
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
-              <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Correct</p>
-              <p className="mt-2 text-3xl font-black text-emerald-600"><AnimatedNumber value={result.correctCount} /></p>
-            </div>
-            <div className="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
-              <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Incorrect</p>
-              <p className="mt-2 text-3xl font-black text-rose-600"><AnimatedNumber value={result.incorrectCount} /></p>
-            </div>
-            <div className="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
-              <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">XP earned</p>
-              <p className="mt-2 text-3xl font-black text-amber-600 motion-safe:animate-xp-float"><AnimatedNumber value={result.xpEarned} prefix="+" /></p>
-            </div>
-          </div>
-
-          <div className="rounded-3xl bg-slate-50 p-5 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-200">
-            {result.passed ? (
-              <span>
-                {isReviewMode ? 'Review session saved. No new lesson nodes were unlocked.' : <>Lesson complete. {savedAttempt?.newlyUnlockedLessons.length
-                  ? `${savedAttempt.newlyUnlockedLessons.length} new lesson path node was unlocked.`
-                  : 'Replay completed lessons any time to practice again.'}</>}
-              </span>
-            ) : (
-              <span>
-                {isReviewMode
-                  ? 'Review attempts still save incorrect answers and weak concepts, but they never unlock course lessons.'
-                  : 'Failed attempts still save your best score, incorrect answers, and weak concepts, but they do not unlock the next lesson.'}
-              </span>
-            )}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={retryLesson}
-              className="rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50"
+        <section className="min-h-[calc(100vh-8.5rem)] rounded-[2.25rem] bg-white p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 dark:bg-black dark:shadow-none dark:ring-zinc-800 sm:p-7">
+          <div className="grid min-h-[calc(100vh-12rem)] gap-6 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+            <div
+              className={classNames(
+                'relative overflow-hidden rounded-[2rem] p-6 text-center ring-1',
+                result.passed
+                  ? 'bg-gradient-to-br from-emerald-50 to-sky-50 ring-emerald-100 dark:from-black dark:to-black dark:ring-emerald-500/20'
+                  : 'bg-gradient-to-br from-amber-50 to-orange-50 ring-amber-100 dark:from-black dark:to-black dark:ring-amber-500/20'
+              )}
             >
-              Retry lesson
-            </button>
-            <button
-              type="button"
-              onClick={onBackToCourseMap}
-              className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              {resolvedReturnLabel}
-            </button>
+              <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/70 blur-xl dark:bg-emerald-400/10" />
+              <div className="relative">
+                <img
+                  src={result.passed ? ROBOT_GRAPHICS.celebration : ROBOT_GRAPHICS.teacher}
+                  alt={result.passed ? 'Robot celebrating lesson completion' : 'Robot encouraging another try'}
+                  className="mx-auto h-60 w-60 object-contain"
+                />
+                <p className="mt-4 text-sm font-black uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">Score</p>
+                <p className="mt-2 text-7xl font-black tracking-tight text-slate-950 dark:text-white">
+                  <AnimatedNumber value={result.scorePercentage} suffix="%" />
+                </p>
+                <p className="mt-3 text-sm font-bold text-slate-600 dark:text-zinc-300">
+                  {result.passed ? 'Passed' : 'Needs retry'} · Passing score is {PASSING_PERCENTAGE}%
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">
+                  {isReviewMode ? 'Review complete' : 'Lesson complete'}
+                </p>
+                <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white sm:text-5xl">
+                  {result.passed ? (isReviewMode ? 'Review session complete!' : 'You passed this lesson!') : 'Keep practicing'}
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-zinc-300">
+                  {isReviewMode
+                    ? 'Review results were saved locally, review XP was awarded, and no course lessons were unlocked.'
+                    : result.passed
+                      ? 'Progress was saved locally, XP was awarded, and the next available lesson was unlocked.'
+                      : 'This attempt was saved locally. Score 70% or higher to mark the lesson complete and unlock what comes next.'}
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200 dark:bg-zinc-950 dark:ring-zinc-800">
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Correct</p>
+                  <p className="mt-2 text-3xl font-black text-emerald-600"><AnimatedNumber value={result.correctCount} /></p>
+                </div>
+                <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200 dark:bg-zinc-950 dark:ring-zinc-800">
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Incorrect</p>
+                  <p className="mt-2 text-3xl font-black text-rose-600"><AnimatedNumber value={result.incorrectCount} /></p>
+                </div>
+                <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200 dark:bg-zinc-950 dark:ring-zinc-800">
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">XP earned</p>
+                  <p className="mt-2 text-3xl font-black text-amber-600"><AnimatedNumber value={result.xpEarned} prefix="+" /></p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-slate-50 p-5 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-200 dark:bg-zinc-950 dark:text-zinc-300 dark:ring-zinc-800">
+                {result.passed ? (
+                  <span>
+                    {isReviewMode ? 'Review session saved. No new lesson nodes were unlocked.' : <>Lesson complete. {savedAttempt?.newlyUnlockedLessons.length
+                      ? `${savedAttempt.newlyUnlockedLessons.length} new lesson path node was unlocked.`
+                      : 'Replay completed lessons any time to practice again.'}</>}
+                  </span>
+                ) : (
+                  <span>
+                    {isReviewMode
+                      ? 'Review attempts still save incorrect answers and weak concepts, but they never unlock course lessons.'
+                      : 'Failed attempts still save your best score, incorrect answers, and weak concepts, but they do not unlock the next lesson.'}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={retryLesson}
+                  className="rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50 dark:bg-zinc-950 dark:text-zinc-200 dark:ring-zinc-800"
+                >
+                  Retry lesson
+                </button>
+                <button
+                  type="button"
+                  onClick={onBackToCourseMap}
+                  className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
+                >
+                  {resolvedReturnLabel}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </PageCard>
+        </section>
       </div>
     );
   }
@@ -1021,54 +1032,72 @@ export function LessonPlayerPage({
   }
 
   return (
-    <div className="space-y-6">
-      <PageCard eyebrow={isReviewMode ? 'Review mode' : 'Lesson player'} title={lesson.title} description={lesson.summary}>
-        <div className="space-y-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-black text-slate-500">
-                Exercise {exerciseNumber} of {totalExercises}
-              </p>
-              <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-600">
-                {getExerciseTypeLabel(currentExercise.type)} · +10 XP per correct answer
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onBackToCourseMap}
-              aria-label={resolvedExitLabel}
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50"
-            >
-              {resolvedExitLabel}
-            </button>
-          </div>
+    <section className="min-h-[calc(100vh-8.5rem)] rounded-[2.25rem] bg-white p-4 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 dark:bg-black dark:shadow-none dark:ring-zinc-800 sm:p-6">
+      <div className="grid min-h-[calc(100vh-11.5rem)] gap-6 lg:grid-cols-[0.78fr_1.22fr]">
+        <aside className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100 dark:from-black dark:to-black dark:ring-emerald-500/20 sm:p-6">
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/60 blur-3xl dark:bg-emerald-400/10" aria-hidden="true" />
+          <div className="relative flex h-full flex-col justify-between gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                  {isReviewMode ? 'Review mode' : 'Lesson player'}
+                </p>
+                <button
+                  type="button"
+                  onClick={onBackToCourseMap}
+                  aria-label={resolvedExitLabel}
+                  className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50 dark:bg-zinc-950 dark:text-zinc-200 dark:ring-zinc-800"
+                >
+                  {resolvedExitLabel}
+                </button>
+              </div>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-              <span>Lesson progress</span>
-              <span>{Math.round(progressPercentage)}%</span>
+              <div>
+                <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                  {lesson.title}
+                </h2>
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-zinc-300">
+                  {lesson.summary}
+                </p>
+              </div>
             </div>
-            <ProgressBar value={progressPercentage} label="Lesson exercise progress" size="lg" tone="violet" />
-          </div>
-        </div>
-      </PageCard>
 
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 sm:p-7">
-        <div className="space-y-6">
-          <div className="rounded-[2rem] bg-slate-50 p-5 ring-1 ring-slate-200 sm:p-6">
+            <img src={ROBOT_GRAPHICS.teacher} alt="Robot tutor" className="mx-auto hidden h-56 w-56 object-contain lg:block" />
+
+            <div className="space-y-4">
+              <div className="rounded-[1.5rem] bg-white/80 p-4 ring-1 ring-white/80 dark:bg-zinc-950 dark:ring-zinc-800">
+                <div className="flex items-center justify-between gap-3 text-sm font-black text-slate-500 dark:text-zinc-400">
+                  <span>Exercise {exerciseNumber} of {totalExercises}</span>
+                  <span>{Math.round(progressPercentage)}%</span>
+                </div>
+                <div className="mt-3">
+                  <ProgressBar value={progressPercentage} label="Lesson exercise progress" size="lg" tone="violet" />
+                </div>
+                <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-300">
+                  {getExerciseTypeLabel(currentExercise.type)} · +10 XP per correct answer
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div className="flex flex-col gap-5 rounded-[2rem] bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-zinc-950 dark:ring-zinc-800 sm:p-6">
+          <div className="rounded-[2rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-black dark:ring-zinc-800 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Prompt</p>
-            <h2 className="mt-3 text-xl font-black leading-8 tracking-tight text-slate-950 sm:text-2xl">
+            <h2 className="mt-3 text-2xl font-black leading-9 tracking-tight text-slate-950 dark:text-white sm:text-3xl">
               {currentExercise.prompt}
             </h2>
             {currentExercise.hint ? (
-              <details className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-200">
-                <summary className="cursor-pointer font-black text-slate-700">Need a hint?</summary>
+              <details className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-200 dark:bg-zinc-950 dark:text-zinc-300 dark:ring-zinc-800">
+                <summary className="cursor-pointer font-black text-slate-700 dark:text-zinc-200">Need a hint?</summary>
                 <p className="mt-2">{currentExercise.hint}</p>
               </details>
             ) : null}
           </div>
 
-          {renderExerciseInput(currentExercise)}
+          <div className="flex-1">
+            {renderExerciseInput(currentExercise)}
+          </div>
 
           {currentExercise.type !== 'flashcard' ? (
             <button
@@ -1079,8 +1108,8 @@ export function LessonPlayerPage({
               className={classNames(
                 'w-full rounded-2xl px-5 py-4 text-sm font-black shadow-lg transition',
                 canSubmit
-                  ? 'bg-slate-950 text-white shadow-slate-900/15 hover:-translate-y-0.5 hover:bg-slate-800'
-                  : 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-transparent'
+                  ? 'bg-slate-950 text-white shadow-slate-900/15 hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300'
+                  : 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-transparent dark:bg-zinc-900 dark:text-zinc-600'
               )}
             >
               Submit
@@ -1092,34 +1121,34 @@ export function LessonPlayerPage({
               className={classNames(
                 'rounded-[2rem] p-5 ring-1 sm:p-6',
                 feedback.isCorrect
-                  ? 'bg-emerald-50 text-emerald-900 ring-emerald-100'
-                  : 'bg-rose-50 text-rose-900 ring-rose-100'
+                  ? 'bg-emerald-50 text-emerald-900 ring-emerald-100 dark:bg-black dark:text-emerald-200 dark:ring-emerald-500/20'
+                  : 'bg-rose-50 text-rose-900 ring-rose-100 dark:bg-black dark:text-rose-200 dark:ring-rose-500/20'
               )}
               role="status"
             >
               <p className="flex items-center gap-2 text-lg font-black">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-base shadow-sm" aria-hidden="true">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-base shadow-sm dark:bg-zinc-950" aria-hidden="true">
                   {feedback.isCorrect ? '✓' : '!' }
                 </span>
                 <span>{feedback.isCorrect ? 'Correct!' : 'Incorrect — review the explanation'}</span>
               </p>
               <p className="mt-2 text-sm font-bold leading-6">{feedback.message}</p>
-              <div className="mt-4 rounded-2xl bg-white/70 p-4 text-sm font-bold leading-6 text-slate-700 ring-1 ring-white/80">
-                <span className="font-black text-slate-950">Explanation: </span>
+              <div className="mt-4 rounded-2xl bg-white/70 p-4 text-sm font-bold leading-6 text-slate-700 ring-1 ring-white/80 dark:bg-zinc-950 dark:text-zinc-300 dark:ring-zinc-800">
+                <span className="font-black text-slate-950 dark:text-white">Explanation: </span>
                 {currentExercise.explanation ??
                   'Review the correct answer and connect it back to the lesson goal before continuing.'}
               </div>
               <button
                 type="button"
                 onClick={continueToNextExercise}
-                className="mt-5 w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:w-auto"
+                className="mt-5 w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:w-auto dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
               >
                 {currentExerciseIndex >= totalExercises - 1 ? 'See results' : 'Continue'}
               </button>
             </div>
           ) : null}
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

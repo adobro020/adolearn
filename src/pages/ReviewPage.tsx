@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { PageCard } from '../components/PageCard';
-import { BRAND_ASSETS } from '../data/brandAssets';
 import { AnimatedNumber, EmptyState, NoticeBanner } from '../components/Polish';
 import { getCourseById } from '../services/courseService';
 import { createReviewSession, getReviewSummary } from '../services/reviewService';
@@ -72,23 +71,6 @@ export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseM
         description={`A temporary review lesson built from ${scopeLabel}. It uses only saved local course data and progress.`}
       >
         <div className="space-y-5">
-          <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sky-50 to-emerald-50 p-5 ring-1 ring-sky-100 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-sky-700">
-                Smart practice mix
-              </p>
-              <p className="mt-2 max-w-xl text-sm font-bold leading-6 text-slate-600">
-                Review combines missed questions, older lessons, and weak concepts into one quick session.
-              </p>
-            </div>
-            <img
-              src={BRAND_ASSETS.robotAudio}
-              alt="AdoLearn robot listening to study material"
-              className="mx-auto mt-4 hidden max-h-32 w-full max-w-40 rounded-3xl object-contain sm:mt-0 md:block"
-              loading="lazy"
-            />
-          </div>
-
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">Questions</p>

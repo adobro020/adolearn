@@ -141,22 +141,36 @@ function validatePairs(value: unknown, path: Path, errors: string[]): void {
   });
 }
 
-function validateOrdering(exercise: Record<string, unknown>, path: Path, errors: string[]): void {
+function validateOrdering(
+  exercise: Record<string, unknown>,
+  path: Path,
+  errors: string[],
+  options: CourseValidationOptions
+): void {
   if (!Array.isArray(exercise.items) || exercise.items.length === 0) {
     errors.push(`${path}.items must contain at least one item for an ordering exercise.`);
     return;
   }
 
   const itemIds = new Set<string>();
+  let containsRepairableStringItems = false;
+
   exercise.items.forEach((item, itemIndex) => {
     if (!isRecord(item)) {
+      if (options.allowNormalizerRepair && isNonEmptyString(item)) {
+        containsRepairableStringItems = true;
+        return;
+      }
+
       errors.push(`${path}.items[${itemIndex}] must be an object.`);
       return;
     }
 
     const typedItem = item as Partial<OrderingItem>;
     if (!isNonEmptyString(typedItem.id)) {
-      errors.push(`${path}.items[${itemIndex}].id must be a non-empty string.`);
+      if (!options.allowNormalizerRepair) {
+        errors.push(`${path}.items[${itemIndex}].id must be a non-empty string.`);
+      }
     } else {
       itemIds.add(typedItem.id);
     }
@@ -167,7 +181,9 @@ function validateOrdering(exercise: Record<string, unknown>, path: Path, errors:
   });
 
   if (!Array.isArray(exercise.correctOrder) || exercise.correctOrder.length === 0) {
-    errors.push(`${path}.correctOrder must exist for an ordering exercise.`);
+    if (!options.allowNormalizerRepair) {
+      errors.push(`${path}.correctOrder must exist for an ordering exercise.`);
+    }
     return;
   }
 
@@ -177,7 +193,7 @@ function validateOrdering(exercise: Record<string, unknown>, path: Path, errors:
       return;
     }
 
-    if (itemIds.size > 0 && !itemIds.has(itemId)) {
+    if (!containsRepairableStringItems && itemIds.size > 0 && !itemIds.has(itemId)) {
       errors.push(`${path}.correctOrder[${orderIndex}] must reference an item ID from ${path}.items.`);
     }
   });
@@ -223,7 +239,7 @@ function validateExercise(
   }
 
   if (candidate.type === 'ordering') {
-    validateOrdering(candidate, path, errors);
+    validateOrdering(candidate, path, errors, options);
   }
 
   if (
