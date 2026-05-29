@@ -2,7 +2,7 @@ import type { ExerciseType, LessonType } from '../types/course';
 
 export const COURSE_SCHEMA_VERSION = 'adolearn-course-v2';
 
-export const VALID_LESSON_TYPES: LessonType[] = ['standard', 'review', 'final_challenge'];
+export const VALID_LESSON_TYPES: LessonType[] = ['standard', 'review'];
 
 export const VALID_EXERCISE_TYPES: ExerciseType[] = ['multiple_choice', 'true_false'];
 
@@ -63,7 +63,7 @@ export const ADOLEARN_COURSE_SCHEMA = {
                   id: 'string',
                   type: VALID_EXERCISE_TYPES,
                   prompt: 'string',
-                  choices: 'optional array of { id: string, text: string }; required for multiple_choice',
+                  choices: 'optional array of { id: string, text: string, explanation?: string }; required for multiple_choice',
                   answer: 'string | boolean; required for scoring',
                   acceptedAnswers: 'optional string[] for answer metadata',
                   explanation: 'string; required for every exercise',
@@ -92,8 +92,10 @@ export function getCourseJSONContractSummary(): string {
     'Every course must contain units, every unit must contain sections, every section must contain lessons, and every lesson must contain exercises.',
     'Every lesson must include learning objectives.',
     'Every exercise must include a prompt, an explanation, and a hint when possible.',
-    'multiple_choice exercises require choices and a correct answer represented by answer or acceptedAnswers.',
-    'true_false exercises require a boolean answer.'
+    'multiple_choice exercises require no more than four choices and a correct answer represented by answer or acceptedAnswers.',
+    'For multiple_choice exercises, every choice should include an explanation field that explains why that choice is right or wrong using source-grounded reasoning.',
+    'true_false exercises require a boolean answer.',
+    'Each lesson may contain up to four exercises/questions.'
   ].join('\n');
 }
 
@@ -155,6 +157,7 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
                       exercises: {
                         type: 'array',
                         minItems: 1,
+                        maxItems: 4,
                         items: {
                           type: 'object',
                           additionalProperties: true,
@@ -165,13 +168,15 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
                             prompt: { type: 'string' },
                             choices: {
                               type: 'array',
+                              maxItems: 4,
                               items: {
                                 type: 'object',
                                 additionalProperties: true,
                                 required: ['text'],
                                 properties: {
                                   id: { type: 'string' },
-                                  text: { type: 'string' }
+                                  text: { type: 'string' },
+                                  explanation: { type: 'string' }
                                 }
                               }
                             },

@@ -17,11 +17,6 @@ interface CourseMapPageProps {
   onOpenReview: (courseId: string) => void;
 }
 
-interface NumberedLesson {
-  lesson: Lesson;
-  globalLessonNumber: number;
-}
-
 function getAllLessons(course: Course): Lesson[] {
   return course.units.flatMap((unit) =>
     unit.sections.flatMap((section) => section.lessons)
@@ -30,7 +25,7 @@ function getAllLessons(course: Course): Lesson[] {
 
 
 function getPracticeExerciseCount(lesson: Lesson): number {
-  return lesson.exercises.length;
+  return Math.min(lesson.exercises.length, 4);
 }
 
 function getLessonCount(course: Course): number {
@@ -58,10 +53,6 @@ function calculateLessonGroupProgress(lessons: Lesson[], progress: CourseProgres
 
 function getUnitLessons(unit: Course['units'][number]): Lesson[] {
   return unit.sections.flatMap((section) => section.lessons);
-}
-
-function getSectionLessons(section: Course['units'][number]['sections'][number]): Lesson[] {
-  return section.lessons;
 }
 
 function calculateCourseXP(progress: CourseProgress | null): number {
@@ -94,21 +85,12 @@ function getLessonKindLabel(lesson: Lesson): string {
     return 'Review';
   }
 
-  if (lesson.type === 'final_challenge') {
-    return 'Final challenge';
-  }
-
   return 'Lesson';
 }
 
 function getLessonBadge(lesson: Lesson, lessonNumber: number, completed: boolean, unlocked: boolean) {
   if (completed) {
     return '✓';
-  }
-
-
-  if (lesson.type === 'final_challenge') {
-    return '★';
   }
 
   return lessonNumber.toString();
@@ -130,7 +112,6 @@ function LessonNode({
   onClick: () => void;
 }) {
   const isReview = lesson.type === 'review';
-  const isFinalChallenge = lesson.type === 'final_challenge';
   const canOpen = true;
 
   return (
@@ -143,12 +124,10 @@ function LessonNode({
             'flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-black shadow-sm ring-4 transition duration-200 active:scale-95 sm:h-20 sm:w-20 sm:text-2xl',
             completed && 'bg-emerald-500 text-white ring-emerald-100 hover:-translate-y-1',
             !completed && current && 'animate-[pulse_2.4s_ease-in-out_infinite] bg-white text-emerald-700 shadow-xl shadow-emerald-200/70 ring-emerald-200 hover:-translate-y-1',
-            !completed && !current && canOpen && !isReview && !isFinalChallenge &&
+            !completed && !current && canOpen && !isReview &&
               'bg-white text-slate-900 ring-slate-200 hover:-translate-y-1 hover:ring-emerald-200',
             !completed && canOpen && isReview &&
               'bg-sky-500 text-white ring-sky-100 hover:-translate-y-1',
-            !completed && canOpen && isFinalChallenge &&
-              'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white ring-violet-100 hover:-translate-y-1',
             !canOpen && 'bg-slate-100 text-slate-400 ring-slate-200 hover:bg-slate-200'
           )}
           aria-label={`${canOpen ? 'Open' : 'Locked'} ${getLessonKindLabel(lesson)} ${lessonNumber}: ${lesson.title}`}
@@ -172,10 +151,9 @@ function LessonNode({
           <span
             className={classNames(
               'rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em]',
-              isFinalChallenge && 'bg-violet-100 text-violet-700',
               isReview && 'bg-sky-100 text-sky-700',
-              !isFinalChallenge && !isReview && completed && 'bg-emerald-100 text-emerald-700',
-              !isFinalChallenge && !isReview && !completed && canOpen && 'bg-slate-100 text-slate-600',
+              !isReview && completed && 'bg-emerald-100 text-emerald-700',
+              !isReview && !completed && canOpen && 'bg-slate-100 text-slate-600',
               !canOpen && 'bg-slate-200 text-slate-500'
             )}
           >
@@ -201,9 +179,6 @@ function LessonNode({
         <h4 className="mt-3 text-base font-black tracking-tight text-slate-950 sm:text-lg">
           {lesson.title}
         </h4>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          {lesson.summary || 'A bite-sized lesson with quick practice exercises.'}
-        </p>
         <p className="mt-3 text-sm font-black text-slate-500">
           {lesson.estimatedMinutes} min | {getPracticeExerciseCount(lesson)} questions
         </p>
@@ -287,7 +262,6 @@ export function CourseMapPage({
     );
   }
 
-  let lessonCounter = 0;
 
   function handleLessonClick(lesson: Lesson) {
     if (!course) {
@@ -406,15 +380,10 @@ export function CourseMapPage({
 
             <div className="space-y-5">
               {unit.sections.map((section, sectionIndex) => {
-                const numberedLessons: NumberedLesson[] = section.lessons.map((lesson) => {
-                  lessonCounter += 1;
-                  return {
-                    lesson,
-                    globalLessonNumber: lessonCounter
-                  };
-                });
-                const sectionLessons = getSectionLessons(section);
-                const sectionProgress = calculateLessonGroupProgress(sectionLessons, progress);
+                const numberedLessons = section.lessons.map((lesson, lessonIndex) => ({
+                  lesson,
+                  lessonNumber: lessonIndex + 1
+                }));
 
                 return (
                   <div
@@ -429,13 +398,6 @@ export function CourseMapPage({
                         {section.title}
                       </h3>
                       <p className="mt-1 text-sm leading-6 text-slate-600">{section.description}</p>
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                          <span>Section progress</span>
-                          <span>{sectionProgress}%</span>
-                        </div>
-                        <ProgressBar value={sectionProgress} label={`${section.title} progress`} tone="sky" />
-                      </div>
                     </div>
 
                     <div className="relative mt-5 pl-2 sm:pl-4">
@@ -444,7 +406,7 @@ export function CourseMapPage({
                         className="absolute bottom-8 left-10 top-8 w-1 rounded-full bg-gradient-to-b from-emerald-200 via-sky-200 to-violet-200 sm:left-14"
                       />
                       <ol>
-                        {numberedLessons.map(({ lesson, globalLessonNumber }) => {
+                        {numberedLessons.map(({ lesson, lessonNumber }) => {
                           const completed = progress?.completedLessons.includes(lesson.id) ?? false;
                           const unlocked = true;
                           const current = lesson.id === currentLessonId && !completed;
@@ -453,7 +415,7 @@ export function CourseMapPage({
                             <LessonNode
                               key={lesson.id}
                               lesson={lesson}
-                              lessonNumber={globalLessonNumber}
+                              lessonNumber={lessonNumber}
                               completed={completed}
                               unlocked={unlocked}
                               current={current}

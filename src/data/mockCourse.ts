@@ -117,7 +117,7 @@ export const MOCK_SECTION_BLUEPRINTS: MockSectionBlueprint[] = [
       {
         title: 'Mastery Check',
         description:
-          'Consolidate the learning path with cumulative questions, confidence checks, and a final challenge.',
+          'Consolidate the learning path with cumulative questions, confidence checks, and review practice.',
         lessons: [
           {
             title: 'Fix Common Confusions',
@@ -132,10 +132,10 @@ export const MOCK_SECTION_BLUEPRINTS: MockSectionBlueprint[] = [
               'You will link the most important ideas together into one reusable study framework.'
           },
           {
-            title: 'Final Challenge',
+            title: 'Mastery Review',
             focus: 'mastery',
             summary:
-              'You will complete a final mixed check that combines recall, explanation, and application.'
+              'You will complete a mixed review that combines recall, explanation, and application.'
           }
         ]
       }

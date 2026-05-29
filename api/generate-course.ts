@@ -77,12 +77,13 @@ const COURSE_SCHEMA = {
                     required: ['title', 'type', 'estimatedMinutes', 'learningObjectives', 'summary', 'exercises'],
                     properties: {
                       title: { type: 'string' },
-                      type: { type: 'string', enum: ['standard', 'review', 'final_challenge'] },
+                      type: { type: 'string', enum: ['standard', 'review'] },
                       estimatedMinutes: { type: 'number' },
                       learningObjectives: { type: 'array', items: { type: 'string' } },
                       summary: { type: 'string' },
                       exercises: {
                         type: 'array',
+                        maxItems: 4,
                         items: {
                           type: 'object',
                           additionalProperties: true,
@@ -92,12 +93,14 @@ const COURSE_SCHEMA = {
                             prompt: { type: 'string' },
                             choices: {
                               type: 'array',
+                              maxItems: 4,
                               items: {
                                 type: 'object',
                                 additionalProperties: true,
                                 properties: {
                                   id: { type: 'string' },
-                                  text: { type: 'string' }
+                                  text: { type: 'string' },
+                                  explanation: { type: 'string' }
                                 }
                               }
                             },
@@ -235,13 +238,15 @@ async function readRequestBody(request: ApiRequest): Promise<unknown> {
 
 function getCourseJSONContractSummary(): string {
   return [
-    'Valid lesson types: standard, review, final_challenge',
+    'Valid lesson types: standard, review',
     'Valid exercise types: multiple_choice, true_false',
     'Every course must contain units, every unit must contain sections, every section must contain lessons, and every lesson must contain exercises.',
     'Every lesson must include learning objectives.',
     'Every exercise must include a prompt, an explanation, and a hint when possible.',
-    'multiple_choice exercises require choices and the correct answer.',
-    'true_false exercises require a boolean answer.'
+    'multiple_choice exercises require no more than four choices and the correct answer.',
+    'For multiple_choice exercises, every choice should include an explanation field that explains why that choice is right or wrong using source-grounded reasoning.',
+    'true_false exercises require a boolean answer.',
+    'Each lesson may contain up to four exercises/questions.'
   ].join('\n');
 }
 
@@ -282,7 +287,10 @@ Make the units, sections, lessons, and exercises per lesson based off how long t
 
 Exercise requirements:
 - Mix lesson exercise types when possible: multiple_choice, true_false. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
-- For multiple_choice, include choices and make sure the correct answer is represented.
+- Each lesson may contain up to 4 exercises/questions.
+- For multiple_choice, include no more than 4 choices and make sure the correct answer is represented.
+- For each multiple_choice choice, include an explanation field that explains why that specific choice is right or wrong using only the source material.
+- For true_false, the exercise explanation must explain why the correct true/false answer is supported by the source material.
 - Every exercise must include prompt, explanation, hint, and concept when possible.
 
 JSON contract summary:

@@ -23,8 +23,11 @@ const MAX_SUMMARY_LENGTH = 900;
 const MAX_PROMPT_LENGTH = 1000;
 const MAX_EXPLANATION_LENGTH = 1200;
 const MAX_HINT_LENGTH = 500;
+const MAX_CHOICE_EXPLANATION_LENGTH = 500;
 const MAX_SOURCE_PREVIEW_LENGTH = 500;
 const DEFAULT_LESSON_MINUTES = 8;
+const MAX_EXERCISES_PER_LESSON = 4;
+const MAX_MULTIPLE_CHOICE_CHOICES = 4;
 
 function createId(prefix: string): string {
   const randomId =
@@ -125,6 +128,29 @@ function answerToAcceptedAnswers(answer: ExerciseAnswer | undefined): string[] {
   return [answer.trim()].filter(Boolean);
 }
 
+function isStandaloneChoiceLabel(value: string): boolean {
+  return /^[A-D]$/i.test(value.trim());
+}
+
+function normalizeChoiceText(value: string): string {
+  return value.replace(/^[A-D][).:-]\s+/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function dedupeChoices(choices: ExerciseChoice[]): ExerciseChoice[] {
+  const seenChoiceText = new Set<string>();
+
+  return choices.filter((choice) => {
+    const key = normalizeChoiceText(choice.text);
+
+    if (!key || seenChoiceText.has(key)) {
+      return false;
+    }
+
+    seenChoiceText.add(key);
+    return true;
+  });
+}
+
 function normalizeChoices(value: unknown, seenIds: Set<string>): ExerciseChoice[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -133,29 +159,81 @@ function normalizeChoices(value: unknown, seenIds: Set<string>): ExerciseChoice[
   const choices = value.reduce<ExerciseChoice[]>((result, choice, index) => {
     if (!isRecord(choice)) {
       if (typeof choice === 'string' && choice.trim()) {
-        result.push({ id: ensureUniqueId(undefined, 'choice', seenIds), text: trimText(choice, `Choice ${index + 1}`, 300) });
+        result.push({ id: ensureUniqueId(undefined, 'choice', seenIds), text: trimText(choice, `Choice ${index + 1}`, 300), explanation: 'This option should be checked against the source-supported answer.' });
       }
       return result;
     }
 
     const text = trimText(choice.text, `Choice ${index + 1}`, 300);
+    const explanation = trimText(
+      choice.explanation,
+      'This option should be checked against the source-supported answer.',
+      MAX_CHOICE_EXPLANATION_LENGTH
+    );
     result.push({
       id: ensureUniqueId(choice.id, 'choice', seenIds),
-      text
+      text,
+      explanation
     });
     return result;
   }, []);
 
-  return choices.length > 0 ? choices : undefined;
+  const dedupedChoices = dedupeChoices(choices);
+  const withoutStandaloneLabels = dedupedChoices.filter((choice) => !isStandaloneChoiceLabel(choice.text));
+  const cleanedChoices = withoutStandaloneLabels.length >= 2 ? withoutStandaloneLabels : dedupedChoices;
+
+  return cleanedChoices.length > 0 ? cleanedChoices : undefined;
+}
+
+function resolveMultipleChoiceAnswer(answer: ExerciseAnswer | undefined, choices: ExerciseChoice[] | undefined): ExerciseAnswer | undefined {
+  if (typeof answer !== 'string' || !choices?.length) {
+    return answer;
+  }
+
+  const answerKey = normalizeChoiceText(answer);
+  const matchingChoice = choices.find((choice) => normalizeChoiceText(choice.text) === answerKey);
+
+  if (matchingChoice) {
+    return matchingChoice.text;
+  }
+
+  if (/^[A-D]$/i.test(answer.trim())) {
+    const choiceIndex = answer.trim().toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+    return choices[choiceIndex]?.text ?? answer;
+  }
+
+  return answer;
+}
+
+function resolveMultipleChoiceAcceptedAnswers(answers: string[], choices: ExerciseChoice[] | undefined): string[] {
+  return Array.from(
+    new Set(
+      answers
+        .map((answer) => resolveMultipleChoiceAnswer(answer, choices))
+        .filter((answer): answer is string => typeof answer === 'string' && answer.trim().length > 0)
+    )
+  );
 }
 
 function ensureMultipleChoiceChoices(choices: ExerciseChoice[] | undefined, answer: ExerciseAnswer | undefined, seenIds: Set<string>): ExerciseChoice[] {
-  const normalizedChoices = choices && choices.length >= 2 ? [...choices] : [];
+  let normalizedChoices = choices && choices.length >= 2 ? dedupeChoices(choices) : [];
   const answerText = typeof answer === 'string' && answer.trim() ? answer.trim() : 'The source-supported answer';
-  const hasAnswer = normalizedChoices.some((choice) => choice.text === answerText);
+  const answerKey = normalizeChoiceText(answerText);
 
-  if (!hasAnswer) {
-    normalizedChoices.unshift({ id: ensureUniqueId(undefined, 'choice', seenIds), text: answerText });
+  const withoutStandaloneLabels = normalizedChoices.filter(
+    (choice) => normalizeChoiceText(choice.text) === answerKey || !isStandaloneChoiceLabel(choice.text)
+  );
+
+  if (withoutStandaloneLabels.length >= 2) {
+    normalizedChoices = withoutStandaloneLabels;
+  }
+
+  const existingAnswer = normalizedChoices.find((choice) => normalizeChoiceText(choice.text) === answerKey);
+
+  if (existingAnswer) {
+    normalizedChoices = [existingAnswer, ...normalizedChoices.filter((choice) => choice.id !== existingAnswer.id)];
+  } else {
+    normalizedChoices.unshift({ id: ensureUniqueId(undefined, 'choice', seenIds), text: answerText, explanation: 'This is the source-supported answer for the question.' });
   }
 
   const fallbackDistractors = ['Another option', 'A less supported option', 'Not supported by the source'];
@@ -163,10 +241,10 @@ function ensureMultipleChoiceChoices(choices: ExerciseChoice[] | undefined, answ
     if (normalizedChoices.length >= 2) {
       break;
     }
-    normalizedChoices.push({ id: ensureUniqueId(undefined, 'choice', seenIds), text: distractor });
+    normalizedChoices.push({ id: ensureUniqueId(undefined, 'choice', seenIds), text: distractor, explanation: 'This fallback option is not the source-supported answer.' });
   }
 
-  return normalizedChoices;
+  return normalizedChoices.slice(0, MAX_MULTIPLE_CHOICE_CHOICES);
 }
 
 function normalizeSourceReference(value: unknown): SourceReference | undefined {
@@ -196,13 +274,19 @@ function getDefaultExplanation(exerciseType: ExerciseType): string {
 function normalizeExercise(value: unknown, index: number, seenIds: Set<string>): Exercise {
   const record = isRecord(value) ? value : {};
   const type = normalizeExerciseType(record.type);
-  const incomingAnswer = normalizeAnswer(record.answer, type);
-  const acceptedAnswers = normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(incomingAnswer));
-  const fallbackAnswer = acceptedAnswers[0] ?? (type === 'true_false' ? true : 'The source-supported answer');
+  const initialChoices = type === 'multiple_choice' ? normalizeChoices(record.choices, seenIds) : undefined;
+  const incomingAnswer = type === 'multiple_choice'
+    ? resolveMultipleChoiceAnswer(normalizeAnswer(record.answer, type), initialChoices)
+    : normalizeAnswer(record.answer, type);
+  const incomingAcceptedAnswers = type === 'multiple_choice'
+    ? resolveMultipleChoiceAcceptedAnswers(normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(incomingAnswer)), initialChoices)
+    : normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(incomingAnswer));
+  const fallbackAnswer = incomingAcceptedAnswers[0] ?? (type === 'true_false' ? true : 'The source-supported answer');
   const answer = incomingAnswer ?? fallbackAnswer;
   const normalizedChoices = type === 'multiple_choice'
-    ? ensureMultipleChoiceChoices(normalizeChoices(record.choices, seenIds), answer, seenIds)
+    ? ensureMultipleChoiceChoices(initialChoices, answer, seenIds)
     : undefined;
+  const acceptedAnswers = incomingAcceptedAnswers.length > 0 ? incomingAcceptedAnswers : answerToAcceptedAnswers(answer);
 
   return {
     id: ensureUniqueId(record.id, 'exercise', seenIds),
@@ -210,7 +294,7 @@ function normalizeExercise(value: unknown, index: number, seenIds: Set<string>):
     prompt: trimText(record.prompt, `Practice question ${index + 1}`, MAX_PROMPT_LENGTH),
     choices: normalizedChoices,
     answer,
-    acceptedAnswers: normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(answer)),
+    acceptedAnswers,
     explanation: trimText(record.explanation, getDefaultExplanation(type), MAX_EXPLANATION_LENGTH),
     hint: trimText(record.hint, '', MAX_HINT_LENGTH),
     sourceReference: normalizeSourceReference(record.sourceReference),
@@ -224,10 +308,11 @@ function normalizeLesson(value: unknown, index: number, seenIds: Set<string>): L
   const exercisesSource = Array.isArray(record.exercises) ? record.exercises : [];
   const exercises = exercisesSource
     .map((exercise, exerciseIndex) => normalizeExercise(exercise, exerciseIndex, seenIds))
-    .filter((exercise) => VALID_EXERCISE_TYPES.includes(exercise.type));
+    .filter((exercise) => VALID_EXERCISE_TYPES.includes(exercise.type))
+    .slice(0, MAX_EXERCISES_PER_LESSON);
   const estimatedMinutes = Math.max(
     1,
-    Math.round(asNumber(record.estimatedMinutes, type === 'final_challenge' ? 12 : type === 'review' ? 10 : DEFAULT_LESSON_MINUTES))
+    Math.round(asNumber(record.estimatedMinutes, type === 'review' ? 10 : DEFAULT_LESSON_MINUTES))
   );
 
   return {

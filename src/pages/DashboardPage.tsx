@@ -250,7 +250,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative hidden lg:block">
             <div className="absolute -inset-5 rounded-[3rem] bg-gradient-to-br from-emerald-200/40 to-sky-200/40 blur-2xl dark:from-emerald-400/10 dark:to-sky-400/10" aria-hidden="true" />
             <div className="relative rounded-[2.25rem] bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-5 ring-1 ring-emerald-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 dark:ring-slate-800">
               <img src={ROBOT_GRAPHICS.workflow} alt="AdoLearn robot organizing learning cards" className="mx-auto h-[28rem] w-full object-contain" />

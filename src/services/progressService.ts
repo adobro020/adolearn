@@ -71,7 +71,6 @@ const XP_PER_CORRECT_ANSWER = 10;
 const LESSON_COMPLETION_BONUS_XP = 25;
 const PERFECT_LESSON_BONUS_XP = 50;
 const REVIEW_COMPLETION_BONUS_XP = 15;
-const FINAL_CHALLENGE_COMPLETION_BONUS_XP = 100;
 
 export const DEFAULT_USER_STATS: UserStats = {
   totalXP: 0,
@@ -536,22 +535,6 @@ function findFirstLessonOfNextSection(course: Course, item: LessonPathItem): Les
   return null;
 }
 
-function findFirstLessonOfNextUnit(course: Course, item: LessonPathItem): LessonPathItem | null {
-  const nextUnit = course.units[item.unitIndex + 1];
-  const firstSection = nextUnit?.sections[0];
-
-  if (!firstSection?.lessons[0]) {
-    return null;
-  }
-
-  return {
-    unitIndex: item.unitIndex + 1,
-    sectionIndex: 0,
-    lessonIndex: 0,
-    lesson: firstSection.lessons[0]
-  };
-}
-
 function areSectionLessonsBeforeReviewComplete(course: Course, item: LessonPathItem, completedLessons: Set<string>): boolean {
   const section = course.units[item.unitIndex]?.sections[item.sectionIndex];
 
@@ -570,29 +553,6 @@ function areSectionLessonsBeforeReviewComplete(course: Course, item: LessonPathI
     .every((lesson) => lesson.type === 'review' || completedLessons.has(lesson.id));
 }
 
-function areUnitLessonsBeforeFinalChallengeComplete(
-  course: Course,
-  item: LessonPathItem,
-  completedLessons: Set<string>
-): boolean {
-  const unit = course.units[item.unitIndex];
-
-  if (!unit) {
-    return false;
-  }
-
-  const unitLessons = unit.sections.flatMap((section) => section.lessons);
-  const finalChallengeIndex = unitLessons.findIndex((lesson) => lesson.type === 'final_challenge');
-
-  if (finalChallengeIndex < 0) {
-    return false;
-  }
-
-  return unitLessons
-    .slice(0, finalChallengeIndex)
-    .every((lesson) => lesson.type === 'final_challenge' || completedLessons.has(lesson.id));
-}
-
 function getUnlockedLessonIdsAfterPassing(
   course: Course,
   completedLessonIds: string[],
@@ -608,16 +568,6 @@ function getUnlockedLessonIdsAfterPassing(
 
   getLessonPath(course).forEach((item) => {
     if (!completedLessons.has(item.lesson.id)) {
-      return;
-    }
-
-    if (item.lesson.type === 'final_challenge') {
-      const nextUnitLesson = findFirstLessonOfNextUnit(course, item);
-
-      if (nextUnitLesson) {
-        unlockedLessons.add(nextUnitLesson.lesson.id);
-      }
-
       return;
     }
 
@@ -639,14 +589,6 @@ function getUnlockedLessonIdsAfterPassing(
 
     if (nextLesson.lesson.type === 'review') {
       if (areSectionLessonsBeforeReviewComplete(course, nextLesson, completedLessons)) {
-        unlockedLessons.add(nextLesson.lesson.id);
-      }
-
-      return;
-    }
-
-    if (nextLesson.lesson.type === 'final_challenge') {
-      if (areUnitLessonsBeforeFinalChallengeComplete(course, nextLesson, completedLessons)) {
         unlockedLessons.add(nextLesson.lesson.id);
       }
 
@@ -755,10 +697,6 @@ export function calculateLessonXP(
 
   if (lessonType === 'review') {
     xp += REVIEW_COMPLETION_BONUS_XP;
-  }
-
-  if (lessonType === 'final_challenge') {
-    xp += FINAL_CHALLENGE_COMPLETION_BONUS_XP;
   }
 
   return xp;

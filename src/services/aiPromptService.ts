@@ -44,7 +44,10 @@ Make the units, sections, lessons, and exercises per lesson based off how long t
 
 Exercise requirements:
 - Mix lesson exercise types when possible: multiple_choice, true_false. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
-- For multiple_choice, include choices and make sure the correct answer is represented.
+- Each lesson may contain up to 4 exercises/questions.
+- For multiple_choice, include no more than 4 choices and make sure the correct answer is represented.
+- For each multiple_choice choice, include an explanation field that explains why that specific choice is right or wrong using only the source material.
+- For true_false, the exercise explanation must explain why the correct true/false answer is supported by the source material.
 - Every exercise must include prompt, explanation, hint, and concept when possible.
 
 JSON contract summary:

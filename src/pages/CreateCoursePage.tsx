@@ -36,7 +36,7 @@ const GENERATION_STEPS: GenerationStep[] = [
   },
   {
     label: 'Designing your learning path',
-    detail: 'Arranging units, sections, lessons, reviews, and challenges.'
+    detail: 'Arranging units, sections, lessons, reviews, and practice.'
   },
   {
     label: 'Writing bite-sized lessons',

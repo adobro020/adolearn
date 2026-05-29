@@ -48,8 +48,8 @@ const TECHNIQUES: StudyTechniqueContent[] = [
       },
       {
         title: 'How AdoLearn can help',
-        body: 'Review lessons and final challenges give you natural checkpoints for coming back to a course after an initial pass.',
-        tips: ['Finish one section, then revisit its review.', 'Use final challenges as later checkpoints.', 'Keep sessions short and focused.']
+        body: 'Review lessons give you natural checkpoints for coming back to a course after an initial pass.',
+        tips: ['Finish one section, then revisit its review.', 'Use review lessons as later checkpoints.', 'Keep sessions short and focused.']
       }
     ]
   },
@@ -66,8 +66,8 @@ const TECHNIQUES: StudyTechniqueContent[] = [
       },
       {
         title: 'How AdoLearn can help',
-        body: 'Units, sections, reviews, and final challenges make it easier to move between related concepts while keeping the course structure clear.',
-        tips: ['Use section reviews to connect nearby lessons.', 'Use final challenges to mix the whole course.', 'Track which concepts keep appearing.']
+        body: 'Units, sections, and reviews make it easier to move between related concepts while keeping the course structure clear.',
+        tips: ['Use section reviews to connect nearby lessons.', 'Mix related lesson topics during practice.', 'Track which concepts keep appearing.']
       }
     ]
   },

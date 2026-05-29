@@ -37,7 +37,7 @@ export function Header({ activePage, onLogoClick, onPageChange }: HeaderProps) {
               AdoLearn
             </span>
             <span className="block truncate text-[0.68rem] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
-              Interactive course builder
+              Course builder
             </span>
           </span>
         </button>

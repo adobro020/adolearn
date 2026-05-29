@@ -76,10 +76,9 @@ function extractKeyConcepts(sourceMaterial: string): string[] {
 
 function getMinutesForLesson(lessonType: LessonType): number {
   const baseMinutes = 8;
-  const challengeBonus = lessonType === 'final_challenge' ? 4 : 0;
   const reviewBonus = lessonType === 'review' ? 2 : 0;
 
-  return baseMinutes + challengeBonus + reviewBonus;
+  return baseMinutes + reviewBonus;
 }
 
 function getCourseDescription(sourcePreview: string): string {
@@ -87,12 +86,8 @@ function getCourseDescription(sourcePreview: string): string {
 }
 
 function getLessonType(globalLessonIndex: number): LessonType {
-  if (globalLessonIndex === 6) {
+  if (globalLessonIndex === 6 || globalLessonIndex === 12) {
     return 'review';
-  }
-
-  if (globalLessonIndex === 12) {
-    return 'final_challenge';
   }
 
   return 'standard';
@@ -129,9 +124,7 @@ function createExerciseSet(
   const reviewLanguage =
     lessonType === 'review'
       ? 'This review question checks whether the concept still feels familiar after several lessons.'
-      : lessonType === 'final_challenge'
-        ? 'This final challenge question asks you to combine recall with careful selection.'
-        : 'This question builds confidence with the lesson focus before moving on.';
+      : 'This question builds confidence with the lesson focus before moving on.';
 
   const multipleChoiceAnswer = `Identify how ${concept.toLowerCase()} supports the main idea.`;
   const secondChoiceAnswer = `Connect ${concept.toLowerCase()} to one clear source detail.`;
@@ -188,22 +181,6 @@ function createExerciseSet(
       acceptedAnswers: ['true'],
       explanation: 'Review can strengthen recall by reusing supported material rather than adding new claims.',
       hint: 'Think about what source-grounded means.',
-      sourceReference,
-      concept
-    },
-    {
-      id: createId('exercise'),
-      type: 'multiple_choice',
-      prompt: `What should a learner do after seeing ${concept.toLowerCase()} in this lesson?`,
-      choices: createChoices(`Use ${concept.toLowerCase()} to organize the lesson idea.`, [
-        'Forget the lesson objective.',
-        'Choose an answer without reading the prompt.',
-        'Replace the source with unrelated examples.'
-      ]),
-      answer: `Use ${concept.toLowerCase()} to organize the lesson idea.`,
-      acceptedAnswers: [`Use ${concept.toLowerCase()} to organize the lesson idea.`],
-      explanation: `Using ${concept.toLowerCase()} as an organizer helps make the lesson clearer and easier to review.`,
-      hint: 'Pick the action that helps organize learning.',
       sourceReference,
       concept
     }

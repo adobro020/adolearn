@@ -113,6 +113,10 @@ function validateChoices(exercise: Record<string, unknown>, path: Path, errors: 
     if (!isNonEmptyString(choice.text)) {
       errors.push(`${path}.choices[${choiceIndex}].text must be a non-empty string.`);
     }
+
+    if ('explanation' in choice && choice.explanation !== undefined && !isNonEmptyString(choice.explanation)) {
+      errors.push(`${path}.choices[${choiceIndex}].explanation must be a non-empty string when provided.`);
+    }
   });
 }
 

@@ -1,6 +1,6 @@
 export type ISODateString = string;
 
-export type LessonType = 'standard' | 'review' | 'final_challenge';
+export type LessonType = 'standard' | 'review';
 
 export type ExerciseType = 'multiple_choice' | 'true_false';
 
@@ -43,6 +43,7 @@ export interface Lesson {
 export interface ExerciseChoice {
   id: string;
   text: string;
+  explanation?: string;
 }
 
 export interface SourceReference {

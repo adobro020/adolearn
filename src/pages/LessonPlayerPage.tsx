@@ -11,7 +11,7 @@ import {
   type LessonAttemptSaveResult
 } from '../services/progressService';
 import type { ReviewSession } from '../services/reviewService';
-import type { Course, Exercise, ExerciseAnswer, Lesson } from '../types/course';
+import type { Course, Exercise, ExerciseAnswer, ExerciseChoice, Lesson } from '../types/course';
 import { classNames } from '../utils/classNames';
 import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
@@ -128,6 +128,26 @@ function getCorrectAnswerLabel(exercise: Exercise): string {
   return correctAnswer;
 }
 
+function isChoiceCorrect(choice: ExerciseChoice, exercise: Exercise): boolean {
+  return matchesExactAcceptedAnswer(choice.text, exercise);
+}
+
+function getCorrectChoice(exercise: Exercise): ExerciseChoice | undefined {
+  return exercise.choices?.find((choice) => isChoiceCorrect(choice, exercise));
+}
+
+function getChoiceExplanation(choice: ExerciseChoice, exercise: Exercise, correct: boolean): string {
+  if (choice.explanation?.trim()) {
+    return choice.explanation.trim();
+  }
+
+  if (correct) {
+    return exercise.explanation ?? 'This is the source-supported correct answer for this question.';
+  }
+
+  return 'This choice does not match the source-supported correct answer for this question.';
+}
+
 function getLessonResult(
   answers: LessonAttemptAnswer[],
   totalExercises: number,
@@ -208,7 +228,7 @@ export function LessonPlayerPage({
   const [savedAttempt, setSavedAttempt] = useState<LessonAttemptSaveResult | null>(null);
   const [showEndScreen, setShowEndScreen] = useState(false);
   const practiceExercises = useMemo(
-    () => lesson?.exercises ?? [],
+    () => (lesson?.exercises ?? []).slice(0, 4),
     [lesson]
   );
   const currentExercise = practiceExercises[currentExerciseIndex] ?? null;
@@ -320,6 +340,105 @@ export function LessonPlayerPage({
   }
 
 
+  function renderAnswerFeedbackDetails(exercise: Exercise, isCorrect: boolean) {
+    if (exercise.type === 'multiple_choice') {
+      const choices = (exercise.choices ?? []).slice(0, 4);
+      const selected = choices.find((choice) => normalizeText(choice.text) === normalizeText(selectedChoice));
+      const correctChoice = getCorrectChoice(exercise);
+      const otherWrongChoices = choices.filter((choice) => !isChoiceCorrect(choice, exercise) && choice.id !== selected?.id);
+
+      return (
+        <div className="mt-4 space-y-3">
+          {isCorrect && selected ? (
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+              <p className="text-sm font-black text-slate-950 dark:text-white">Why your answer was right</p>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                {selected.text}: {getChoiceExplanation(selected, exercise, true)}
+              </p>
+            </div>
+          ) : null}
+
+          {!isCorrect && selected ? (
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+              <p className="text-sm font-black text-slate-950 dark:text-white">Why your answer was wrong</p>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                {selected.text}: {getChoiceExplanation(selected, exercise, false)}
+              </p>
+            </div>
+          ) : null}
+
+          {!isCorrect && correctChoice ? (
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+              <p className="text-sm font-black text-slate-950 dark:text-white">Why the right answer was right</p>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                {correctChoice.text}: {getChoiceExplanation(correctChoice, exercise, true)}
+              </p>
+            </div>
+          ) : null}
+
+          {otherWrongChoices.length > 0 ? (
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+              <p className="text-sm font-black text-slate-950 dark:text-white">
+                {isCorrect ? 'Why the other answers were wrong' : 'Why the other wrong answers were wrong'}
+              </p>
+              <ul className="mt-2 space-y-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                {otherWrongChoices.map((choice) => (
+                  <li key={choice.id}>
+                    <span className="font-black">{choice.text}:</span> {getChoiceExplanation(choice, exercise, false)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (exercise.type === 'true_false') {
+      const correctAnswer = exercise.answer === true;
+      const submittedAnswer = booleanAnswer === true;
+      const oppositeLabel = correctAnswer ? 'False' : 'True';
+
+      return (
+        <div className="mt-4 space-y-3">
+          {isCorrect ? (
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+              <p className="text-sm font-black text-slate-950 dark:text-white">Why your answer was right</p>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                {submittedAnswer ? 'True' : 'False'} is correct here. {exercise.explanation ?? 'The selected answer matches the source-supported statement.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+                <p className="text-sm font-black text-slate-950 dark:text-white">Why your answer was wrong</p>
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                  {submittedAnswer ? 'True' : 'False'} does not match the source-supported answer for this question.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+                <p className="text-sm font-black text-slate-950 dark:text-white">Why the right answer was right</p>
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                  {correctAnswer ? 'True' : 'False'} is correct here. {exercise.explanation ?? 'The correct answer matches the source-supported statement.'}
+                </p>
+              </div>
+            </>
+          )}
+          {isCorrect ? (
+            <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-white/80 dark:bg-[#080a12] dark:ring-zinc-800">
+              <p className="text-sm font-black text-slate-950 dark:text-white">Why the other answer was wrong</p>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-700 dark:text-zinc-300">
+                {oppositeLabel} is the opposite of the source-supported answer for this question.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    return null;
+  }
+
   function finishLesson() {
     if (!course || !lesson) {
       return;
@@ -380,7 +499,7 @@ export function LessonPlayerPage({
   function renderChoiceButtons(exercise: Exercise) {
     return (
       <div className="grid gap-3">
-        {(exercise.choices ?? []).map((choice) => {
+        {(exercise.choices ?? []).slice(0, 4).map((choice) => {
           const selected = selectedChoice === choice.text;
 
           return (
@@ -617,6 +736,7 @@ This lesson does not include supported practice questions yet.
               {currentExercise.explanation ??
                 'Review the correct answer and connect it back to the lesson goal before continuing.'}
             </div>
+            {renderAnswerFeedbackDetails(currentExercise, feedback.isCorrect)}
             <button
               type="button"
               onClick={continueToNextExercise}
