@@ -13,7 +13,6 @@ import {
 import type { ReviewSession } from '../services/reviewService';
 import type { Course, Exercise, ExerciseAnswer, Lesson, MatchingPair, OrderingItem } from '../types/course';
 import { classNames } from '../utils/classNames';
-import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface LessonPlayerPageProps {
   courseId: string | null;
@@ -937,11 +936,9 @@ export function LessonPlayerPage({
           >
             <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/70 blur-xl" />
             <div className="relative">
-              <img
-                src={result.passed ? ROBOT_GRAPHICS.celebration : ROBOT_GRAPHICS.teacher}
-                alt={result.passed ? 'Robot celebrating lesson completion' : 'Robot encouraging another try'}
-                className="mx-auto h-40 w-40 object-contain motion-safe:animate-bounce-soft"
-              />
+              <p className="text-5xl motion-safe:animate-bounce-soft" aria-hidden="true">
+                {result.passed ? '🎉' : '💪'}
+              </p>
               <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-emerald-600">Score</p>
               <p className="mt-2 text-6xl font-black tracking-tight text-slate-950">
                 <AnimatedNumber value={result.scorePercentage} suffix="%" />
@@ -1027,12 +1024,6 @@ export function LessonPlayerPage({
     <div className="space-y-6">
       <PageCard eyebrow={isReviewMode ? 'Review mode' : 'Lesson player'} title={lesson.title} description={lesson.summary}>
         <div className="space-y-5">
-          <div className="flex items-center gap-4 rounded-[1.5rem] bg-emerald-50 p-4 ring-1 ring-emerald-100">
-            <img src={ROBOT_GRAPHICS.teacher} alt="Robot tutor" className="h-20 w-20 shrink-0 object-contain" />
-            <p className="text-sm font-bold leading-6 text-slate-600">
-              Follow the prompt, use hints when needed, and keep moving through the bite-sized practice.
-            </p>
-          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-black text-slate-500">

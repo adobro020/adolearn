@@ -147,7 +147,16 @@ const COURSE_SCHEMA = {
                             acceptedAnswers: { type: 'array', items: { type: 'string' } },
                             explanation: { type: 'string' },
                             hint: { type: 'string' },
-                            sourceReference: { type: 'string' },
+                            sourceReference: {
+                              type: 'object',
+                              additionalProperties: true,
+                              properties: {
+                                sourceId: { type: 'string' },
+                                title: { type: 'string' },
+                                excerpt: { type: 'string' },
+                                location: { type: 'string' }
+                              }
+                            },
                             pairs: {
                               type: 'array',
                               items: {
@@ -159,7 +168,18 @@ const COURSE_SCHEMA = {
                                 }
                               }
                             },
-                            items: { type: 'array', items: { type: 'string' } },
+                            items: {
+                              type: 'array',
+                              items: {
+                                type: 'object',
+                                additionalProperties: true,
+                                required: ['id', 'text'],
+                                properties: {
+                                  id: { type: 'string' },
+                                  text: { type: 'string' }
+                                }
+                              }
+                            },
                             correctOrder: { type: 'array', items: { type: 'string' } },
                             concept: { type: 'string' }
                           }
@@ -334,6 +354,8 @@ Critical rules:
 - Include at least one review lesson and one final_challenge lesson.
 - Include 5 exercises per lesson when possible.
 - Exercise types may include multiple_choice, true_false, fill_blank, matching, ordering, short_answer, flashcard, scenario, and explain_concept.
+- For ordering exercises, items must be objects like { "id": "step_1", "text": "First step" }, never plain strings. correctOrder must use those item IDs.
+- For matching exercises, pairs must be objects with left and right text.
 
 Course settings:
 - ${titleInstruction}
@@ -377,7 +399,10 @@ Return one JSON object matching this shape:
                   "acceptedAnswers": ["string"],
                   "explanation": "string",
                   "hint": "string",
-                  "sourceReference": "string",
+                  "sourceReference": { "title": "string", "excerpt": "string", "location": "string" },
+                  "items": [{ "id": "step_1", "text": "string" }],
+                  "correctOrder": ["step_1"],
+                  "pairs": [{ "id": "pair_1", "left": "string", "right": "string" }],
                   "concept": "string"
                 }
               ]

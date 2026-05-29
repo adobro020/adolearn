@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { PageCard } from '../components/PageCard';
+import { BRAND_ASSETS } from '../data/brandAssets';
 import { NoticeBanner, ProgressBar } from '../components/Polish';
 import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
 import { generateCourseWithAI, AICourseGenerationError } from '../services/aiCourseGenerationService';
@@ -11,7 +12,6 @@ import { getSettings } from '../services/settingsService';
 import { isStorageAvailable } from '../services/storageService';
 import type { Course } from '../types/course';
 import type { AppSettings, CourseStyle, Difficulty, LessonLength } from '../types/settings';
-import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface CreateCoursePageProps {
   onCourseCreated: (courseId: string) => void;
@@ -338,14 +338,11 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           }}
         >
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-4 ring-1 ring-emerald-100 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <div className="flex items-center gap-4">
-              <img src={ROBOT_GRAPHICS.workflow} alt="Robot turning material into lesson cards" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
-              <div>
+            <div>
               <p className="text-sm font-black text-slate-950">Source readiness</p>
               <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
                 More detail usually creates better lessons. Short sources still work, especially in mock mode.
               </p>
-              </div>
             </div>
             <div className="mt-3 min-w-48 sm:mt-0">
               <ProgressBar
@@ -397,7 +394,14 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
             </div>
 
             <aside className="space-y-4 rounded-[1.75rem] bg-slate-50 p-4 ring-1 ring-slate-200 sm:p-5">
-              <img src={ROBOT_GRAPHICS.teacher} alt="Robot teaching at a whiteboard" className="mx-auto h-44 w-full object-contain" />
+              <div className="overflow-hidden rounded-[1.5rem] bg-white p-3 ring-1 ring-slate-200">
+                <img
+                  src={BRAND_ASSETS.robotCourseCards}
+                  alt="AdoLearn robot organizing a course from lesson cards"
+                  className="mx-auto max-h-44 w-full object-contain"
+                  loading="lazy"
+                />
+              </div>
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
                   Course settings

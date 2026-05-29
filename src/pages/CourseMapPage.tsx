@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PageCard } from '../components/PageCard';
+import { BRAND_ASSETS } from '../data/brandAssets';
 import { NoticeBanner, ProgressBar, ProgressRing } from '../components/Polish';
 import { getCourseById } from '../services/courseService';
 import { getCourseProgress, initializeCourseProgress, unlockLesson } from '../services/progressService';
@@ -7,7 +8,6 @@ import { getReviewSummary } from '../services/reviewService';
 import type { Course, Lesson } from '../types/course';
 import type { CourseProgress } from '../types/progress';
 import { classNames } from '../utils/classNames';
-import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface CourseMapPageProps {
   courseId: string | null;
@@ -321,6 +321,23 @@ export function CourseMapPage({
         description={course.description || 'Follow the path section by section. Tap an unlocked lesson to practice.'}
       >
         <div className="space-y-5">
+          <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100 sm:flex sm:items-center sm:justify-between sm:gap-6">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">
+                Your lesson map
+              </p>
+              <p className="mt-2 max-w-2xl text-sm font-bold leading-6 text-slate-600">
+                Follow each unit like a learning app path. The highlighted node is your next best step.
+              </p>
+            </div>
+            <img
+              src={BRAND_ASSETS.robotTeacher}
+              alt="AdoLearn robot teaching at a whiteboard"
+              className="mx-auto mt-4 hidden max-h-36 w-full max-w-44 rounded-3xl object-contain sm:mt-0 md:block"
+              loading="lazy"
+            />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-3xl bg-emerald-50 p-5 ring-1 ring-emerald-100">
               <ProgressRing
@@ -354,16 +371,13 @@ export function CourseMapPage({
           </div>
 
           <div className="rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <div className="flex items-center gap-4">
-              <img src={ROBOT_GRAPHICS.audio} alt="Robot reviewing audio notes" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
-              <div>
+            <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-700">
                 Review this course
               </p>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
                 {reviewSummary?.totalItems ?? 0} review items available from missed questions, weak concepts, and completed lessons.
               </p>
-              </div>
             </div>
             <button
               type="button"

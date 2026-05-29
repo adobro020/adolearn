@@ -76,8 +76,8 @@ Suggested course size:
 Exercise requirements:
 - Mix exercise types when possible: multiple_choice, true_false, fill_blank, matching, ordering, short_answer, flashcard, scenario, explain_concept.
 - For multiple_choice, include choices and make sure the correct answer is represented.
-- For matching, include pairs.
-- For ordering, include items and correctOrder using item IDs.
+- For matching, include pairs as objects with id, left, and right text.
+- For ordering, include items as objects with id and text, never plain strings. correctOrder must use those item IDs.
 - For text-graded exercises, include acceptedAnswers with concise expected keywords or phrases.
 - Every exercise must include prompt, explanation, hint, and concept when possible.
 

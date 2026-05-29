@@ -234,14 +234,6 @@ export async function generateCourseWithAI({
 
   const draftValidation = validateCourse(rawCourse, { allowNormalizerRepair: true });
 
-  if (!draftValidation.isValid) {
-    throw new AICourseGenerationError(
-      'invalid_schema',
-      'The generated course was not valid. Try again.',
-      draftValidation.errors.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
-    );
-  }
-
   const normalizedCourse = normalizeCourseFromAIJSON(rawCourse, {
     fallbackTitle: optionalTitle?.trim() || 'Generated Learning Path',
     fallbackDifficulty: difficulty,
@@ -251,10 +243,15 @@ export async function generateCourseWithAI({
   const normalizedValidation = validateCourse(normalizedCourse);
 
   if (!normalizedValidation.isValid) {
+    const validationDetails = [
+      ...normalizedValidation.errors,
+      ...draftValidation.errors.map((error) => `Original draft: ${error}`)
+    ];
+
     throw new AICourseGenerationError(
       'invalid_schema',
       'The generated course was not valid. Try again.',
-      normalizedValidation.errors.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
+      validationDetails.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
     );
   }
 
@@ -263,6 +260,7 @@ export async function generateCourseWithAI({
     validationWarnings: [
       ...(preparedSource.wasCondensed ? [LONG_SOURCE_CONDENSED_WARNING] : []),
       ...(payload.validationWarnings ?? []),
+      ...(!draftValidation.isValid ? ['Some generated fields were repaired before saving.'] : []),
       ...draftValidation.warnings,
       ...normalizedValidation.warnings
     ],
