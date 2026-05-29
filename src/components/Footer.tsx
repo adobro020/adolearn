@@ -22,7 +22,7 @@ const PRODUCT_LINKS = [
 export function Footer({ onNavigate, onCreateCourse }: FooterProps) {
   return (
     <footer className="border-t border-slate-200/80 bg-white/82 px-4 py-10 shadow-[0_-18px_55px_rgba(15,23,42,0.05)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/84">
-      <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr]">
+      <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.5fr_1fr_1fr]">
         <div className="space-y-4">
           <button
             type="button"
@@ -54,17 +54,10 @@ export function Footer({ onNavigate, onCreateCourse }: FooterProps) {
 
         <FooterLinkGroup title="Product" links={PRODUCT_LINKS} onNavigate={onNavigate} />
         <FooterLinkGroup title="Study techniques" links={STUDY_LINKS} onNavigate={onNavigate} />
-
-        <div className="rounded-[1.75rem] border border-emerald-100 bg-emerald-50/70 p-5 dark:border-emerald-400/20 dark:bg-emerald-400/10">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Learn smarter</p>
-          <p className="mt-3 text-sm font-semibold leading-6 text-slate-700 dark:text-slate-200">
-            The footer study pages explain practical ways to review, remember, and organize learning without crowding the homepage.
-          </p>
-        </div>
       </div>
       <div className="mx-auto mt-8 flex w-full max-w-7xl flex-col gap-3 border-t border-slate-200/70 pt-6 text-xs font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:text-slate-400">
         <p>© {new Date().getFullYear()} AdoLearn. Built for bite-sized learning.</p>
-        <p>Courses and progress are saved locally in your browser.</p>
+        <p>AdoLearn is powered by AI and can make mistakes.</p>
       </div>
     </footer>
   );
