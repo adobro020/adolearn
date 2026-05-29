@@ -4,7 +4,6 @@ import { NoticeBanner, ProgressBar } from '../components/Polish';
 import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
 import { generateCourseWithAI, AICourseGenerationError } from '../services/aiCourseGenerationService';
 import { saveCourse } from '../services/courseService';
-import { generateMockCourse } from '../services/mockCourseGenerator';
 import { playLessonCompleteSound } from '../services/soundService';
 import { initializeCourseProgress } from '../services/progressService';
 import { getSettings } from '../services/settingsService';
@@ -122,11 +121,7 @@ function SelectField<T extends string>({
 }
 
 function getGenerationModeLabel(settings: AppSettings): string {
-  if (settings.generationMode === 'server_proxy') {
-    return 'Server proxy';
-  }
-
-  return 'Mock';
+  return settings.modelName || 'AI';
 }
 
 function getVisibleStepIndex(activeStepIndex: number): number {
@@ -163,13 +158,13 @@ function FullScreenGenerationOverlay({
       aria-live="polite"
       aria-busy={!isSuccess}
     >
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-black dark:ring-zinc-800 sm:p-8">
+      <div className="relative w-full max-w-5xl overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-slate-950 dark:ring-zinc-800 sm:p-8">
         <div className="absolute -left-14 top-10 h-40 w-40 rounded-full bg-emerald-200/60 blur-3xl" aria-hidden="true" />
         <div className="absolute -right-8 bottom-0 h-56 w-56 rounded-full bg-sky-200/60 blur-3xl" aria-hidden="true" />
 
         <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 ring-1 ring-emerald-100 dark:bg-black dark:text-emerald-300 dark:ring-emerald-500/40">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 ring-1 ring-emerald-100 dark:bg-slate-950 dark:text-emerald-300 dark:ring-emerald-500/40">
               <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden="true" />
               {generationModeLabel} generation
             </div>
@@ -286,11 +281,13 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
   const [isDraggingSourceFile, setIsDraggingSourceFile] = useState(false);
+  const [isReadingSourceFiles, setIsReadingSourceFiles] = useState(false);
 
   const trimmedSourceMaterial = sourceMaterial.trim();
   const isShortMaterial =
     trimmedSourceMaterial.length > 0 &&
     trimmedSourceMaterial.length < MINIMUM_RECOMMENDED_CHARACTERS;
+  const hasUploadedFiles = uploadedFileNames.length > 0;
   const characterCount = sourceMaterial.length;
   const generationModeLabel = getGenerationModeLabel(settings);
 
@@ -304,6 +301,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   function handleUseDemoMaterial() {
     setSourceMaterial(DEMO_SOURCE_MATERIAL);
     setCourseTitle('Biology Basics: Cells and Energy');
+    setUploadedFileNames([]);
     resetMessages();
     setActiveStepIndex(-1);
   }
@@ -329,6 +327,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     const acceptedBlocks: string[] = [];
     const acceptedNames: string[] = [];
     const skippedNames: string[] = [];
+    setIsReadingSourceFiles(true);
 
     for (const file of selectedFiles) {
       if (file.size > MAX_UPLOAD_FILE_BYTES || !isTextLikeFile(file)) {
@@ -353,23 +352,41 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     }
 
     if (acceptedBlocks.length > 0) {
-      setSourceMaterial((currentMaterial) =>
-        [currentMaterial.trim(), ...acceptedBlocks].filter(Boolean).join('\n\n')
-      );
-      setUploadedFileNames((currentNames) => [...currentNames, ...acceptedNames]);
+      setSourceMaterial(acceptedBlocks.join('\n\n'));
+      setUploadedFileNames(acceptedNames);
       setError(null);
       setSuccessMessage(null);
       setLastWarning(null);
     }
 
-    if (skippedNames.length > 0) {
+    if (acceptedBlocks.length === 0) {
       setUploadNotice(
-        `Added ${acceptedNames.length} file${acceptedNames.length === 1 ? '' : 's'}. Skipped unsupported or oversized file${skippedNames.length === 1 ? '' : 's'}: ${skippedNames.join(', ')}.`
+        'No readable course material was added. Try a text-based file, or paste the material into the text box.'
       );
+      setIsReadingSourceFiles(false);
       return;
     }
 
-    setUploadNotice(`Added ${acceptedNames.length} file${acceptedNames.length === 1 ? '' : 's'} to the learning material.`);
+    if (skippedNames.length > 0) {
+      setUploadNotice(
+        `Uploaded ${acceptedNames.length} readable file${acceptedNames.length === 1 ? '' : 's'}. Skipped unsupported or oversized file${skippedNames.length === 1 ? '' : 's'}: ${skippedNames.join(', ')}.`
+      );
+      setIsReadingSourceFiles(false);
+      return;
+    }
+
+    setUploadNotice(`Uploaded ${acceptedNames.length} file${acceptedNames.length === 1 ? '' : 's'} successfully. The paste box is locked until you remove the file upload.`);
+    setIsReadingSourceFiles(false);
+  }
+
+  function handleRemoveUploadedFiles() {
+    setUploadedFileNames([]);
+    setSourceMaterial('');
+    setUploadNotice('File upload removed. You can paste material or upload a different file.');
+    setError(null);
+    setSuccessMessage(null);
+    setLastWarning(null);
+    setIsReadingSourceFiles(false);
   }
 
   function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -408,43 +425,29 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   }
 
   async function generateCourseForCurrentMode(currentSettings: AppSettings): Promise<Course> {
-    if (currentSettings.generationMode === 'mock') {
-      return generateMockCourse({
-        sourceMaterial: trimmedSourceMaterial,
-        optionalTitle: courseTitle,
-        difficulty,
-        courseStyle,
-        lessonLength
-      });
+    const result = await generateCourseWithAI({
+      sourceMaterial: trimmedSourceMaterial,
+      optionalTitle: courseTitle,
+      difficulty,
+      courseStyle,
+      lessonLength,
+      modelName: currentSettings.modelName
+    });
+
+    if (result.validationWarnings.length > 0) {
+      setLastWarning(
+        `The course was generated, but AdoLearn cleaned up a few details: ${result.validationWarnings
+          .slice(0, 3)
+          .join(' ')}${result.validationWarnings.length > 3 ? ' …' : ''}`
+      );
     }
 
-    if (currentSettings.generationMode === 'server_proxy') {
-      const result = await generateCourseWithAI({
-        sourceMaterial: trimmedSourceMaterial,
-        optionalTitle: courseTitle,
-        difficulty,
-        courseStyle,
-        lessonLength,
-        modelName: currentSettings.modelName
-      });
-
-      if (result.validationWarnings.length > 0) {
-        setLastWarning(
-          `The course was generated, but AdoLearn cleaned up a few details: ${result.validationWarnings
-            .slice(0, 3)
-            .join(' ')}${result.validationWarnings.length > 3 ? ' …' : ''}`
-        );
-      }
-
-      return result.course;
-    }
-
-    throw new Error('Generation failed. Please try again.');
+    return result.course;
   }
 
   async function handleGenerateCourse() {
     if (!trimmedSourceMaterial) {
-      setError('Paste some learning material first so AdoLearn has something to turn into a course.');
+      setError('Add learning material first by pasting text or uploading a readable text-based file.');
       setSuccessMessage(null);
       setLastWarning(null);
       setActiveStepIndex(-1);
@@ -478,7 +481,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
         throw new Error(
           isLikelyTooLargeForBrowserStorage(generatedCourse)
             ? 'The generated course was too large to save locally. Try a shorter source or shorter course settings.'
-            : 'The generated course could not be saved locally. Try again or switch to mock mode.'
+            : 'The generated course could not be saved locally. Try again with shorter source material or a smaller course.'
         );
       }
 
@@ -510,7 +513,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       <PageCard
         eyebrow="Create"
         title="Build a learning path"
-        description="Paste notes, a transcript, an article, or a study guide. AdoLearn can use the local mock generator or, if enabled in Settings, real AI through the Server proxy."
+        description="Paste notes, a transcript, an article, or a study guide. AdoLearn uses the Server proxy and your selected GPT-5 model to generate a real course."
       >
         <form
           className="space-y-6"
@@ -530,7 +533,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                   Turn anything into a Duolingo-style learning path
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-                  More detail usually creates better lessons. Short sources still work, especially in mock mode.
+                  More detail usually creates better lessons. Short sources still work, but richer material usually creates better sections, units, and practice.
                 </p>
                 <div className="mt-5 max-w-lg">
                   <ProgressBar
@@ -586,31 +589,50 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                   multiple
                   accept={ACCEPTED_SOURCE_FILE_TYPES}
                   onChange={handleFileInputChange}
-                  disabled={isGenerating}
+                  disabled={isGenerating || isReadingSourceFiles}
                   className="sr-only"
                 />
-                <p className="text-sm font-black text-slate-950">Drop files here, or upload course material</p>
-                <p className="mx-auto mt-2 max-w-md text-xs font-bold leading-5 text-slate-500">
-                  Supports text-like files such as TXT, Markdown, CSV, JSON, HTML, subtitles, and logs.
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl shadow-sm ring-1 ring-slate-200" aria-hidden="true">
+                  {isReadingSourceFiles ? '…' : hasUploadedFiles ? '✓' : '⇧'}
+                </div>
+                <p className="mt-3 text-sm font-black text-slate-950">
+                  {isReadingSourceFiles ? 'Reading uploaded file…' : hasUploadedFiles ? 'File material is uploaded' : 'Drop files here, or upload course material'}
                 </p>
-                <label
-                  htmlFor="source-file-upload"
-                  className="mt-4 inline-flex cursor-pointer rounded-2xl bg-white px-4 py-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-50"
-                >
-                  Choose files
-                </label>
-                {uploadedFileNames.length > 0 ? (
-                  <p className="mt-3 text-xs font-black text-slate-500">
-                    Added: {uploadedFileNames.slice(-3).join(', ')}{uploadedFileNames.length > 3 ? ' …' : ''}
-                  </p>
-                ) : null}
+                <p className="mx-auto mt-2 max-w-md text-xs font-bold leading-5 text-slate-500">
+                  {hasUploadedFiles
+                    ? 'AdoLearn will generate from the uploaded file content. Remove it to re-enable manual pasting.'
+                    : 'Supports text-like files such as TXT, Markdown, CSV, JSON, HTML, subtitles, and logs.'}
+                </p>
+                {hasUploadedFiles ? (
+                  <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-emerald-200">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">Uploaded</p>
+                    <p className="mt-1 truncate text-sm font-black text-slate-800">
+                      {uploadedFileNames.join(', ')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleRemoveUploadedFiles}
+                      disabled={isGenerating || isReadingSourceFiles}
+                      className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 ring-1 ring-rose-100 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Remove file
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="source-file-upload"
+                    className="mt-4 inline-flex cursor-pointer rounded-2xl bg-white px-4 py-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-50"
+                  >
+                    Choose files
+                  </label>
+                )}
               </div>
 
               <label htmlFor="source-material" className="block">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                   <span className="text-sm font-black text-slate-700">Learning material</span>
                   <span className="text-xs font-bold text-slate-400">
-                    {characterCount.toLocaleString()} characters
+                    {hasUploadedFiles ? 'Paste disabled while file is uploaded' : `${characterCount.toLocaleString()} characters`}
                   </span>
                 </div>
                 <textarea
@@ -622,9 +644,9 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                       resetMessages();
                     }
                   }}
-                  disabled={isGenerating}
-                  className="mt-2 min-h-72 w-full resize-y rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
-                  placeholder="Paste course notes, an article, a podcast transcript, lecture notes, or a study guide here..."
+                  disabled={isGenerating || hasUploadedFiles}
+                  className="mt-2 min-h-72 w-full resize-y rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                  placeholder={hasUploadedFiles ? 'Remove the uploaded file to paste material manually.' : 'Paste course notes, an article, a podcast transcript, lecture notes, or a study guide here...'}
                 />
               </label>
             </div>
@@ -640,7 +662,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                     Course settings
                   </p>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Current generation mode: <span className="font-black text-slate-800">{generationModeLabel}</span>.
+                    Selected AI model: <span className="font-black text-slate-800">{generationModeLabel}</span>.
                     Adjust defaults any time in Settings.
                   </p>
                 </div>
@@ -705,11 +727,11 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="submit"
-              disabled={isGenerating}
+              disabled={isGenerating || isReadingSourceFiles}
               aria-label="Generate AdoLearn course"
               className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none disabled:hover:translate-y-0 sm:min-w-48"
             >
-              {isGenerating ? 'Generating...' : 'Generate Course'}
+              {isGenerating ? 'Generating...' : isReadingSourceFiles ? 'Reading file...' : 'Generate Course'}
             </button>
             <button
               type="button"

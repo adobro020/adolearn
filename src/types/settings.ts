@@ -14,12 +14,9 @@ export type LessonLength = 'Short' | 'Medium' | 'Long';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
-export type GenerationMode = 'mock' | 'server_proxy';
-
 export interface AppSettings {
   modelName: string;
   theme: ThemePreference;
-  generationMode: GenerationMode;
   preferredDifficulty: Difficulty;
   preferredCourseStyle: CourseStyle;
   preferredLessonLength: LessonLength;

@@ -10,7 +10,7 @@ interface BottomNavProps {
 export function BottomNav({ activePage, onPageChange }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-3 bottom-3 z-20 rounded-3xl bg-slate-950/90 p-2 shadow-2xl shadow-slate-900/25 backdrop-blur md:sticky md:bottom-auto md:mx-auto md:mt-6 md:max-w-xl md:bg-black md:ring-1 md:ring-zinc-800"
+      className="fixed inset-x-3 bottom-3 z-20 rounded-3xl bg-slate-950/90 p-2 shadow-2xl shadow-slate-900/25 backdrop-blur md:sticky md:bottom-auto md:mx-auto md:mt-6 md:max-w-xl md:bg-slate-950 md:ring-1 md:ring-zinc-800"
       aria-label="Primary navigation"
     >
       <div className="grid grid-cols-3 gap-2">

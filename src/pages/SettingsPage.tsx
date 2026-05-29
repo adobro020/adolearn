@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { PageCard } from '../components/PageCard';
 import { EmptyState, NoticeBanner } from '../components/Polish';
 import type { Course } from '../types/course';
-import type { AppSettings, GenerationMode, ThemePreference } from '../types/settings';
+import type { AppSettings, ThemePreference } from '../types/settings';
 import { deleteCourse, getCourses, saveCourse } from '../services/courseService';
 import {
   createAdoLearnExportData,
@@ -26,28 +26,30 @@ interface Notice {
   message: string;
 }
 
-const generationModes: Array<{
-  value: GenerationMode;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: 'mock',
-    label: 'Mock mode',
-    description: 'Use the browser-only mock generator for testing and demos.'
-  },
-  {
-    value: 'server_proxy',
-    label: 'Server proxy mode',
-    description: 'Use the server-side server function for real AI course generation.'
-  }
-];
 
 const themes: Array<{ value: ThemePreference; label: string }> = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' }
 ];
+
+const modelOptions = [
+  {
+    value: 'gpt-5-nano',
+    label: 'GPT-5 Nano',
+    description: 'Fastest and most economical option for shorter courses.'
+  },
+  {
+    value: 'gpt-5-mini',
+    label: 'GPT-5 Mini',
+    description: 'Balanced quality and speed for most course generation.'
+  },
+  {
+    value: 'gpt-5',
+    label: 'GPT-5',
+    description: 'Highest-quality option for richer lessons and harder material.'
+  }
+] as const;
 
 function createExportFilename(scope: string): string {
   const datePart = new Date().toISOString().slice(0, 10);
@@ -331,49 +333,48 @@ export function SettingsPage() {
       <PageCard
         eyebrow="AI settings"
         title="Generation controls"
-        description="Choose local mock generation or real AI generation through the Server proxy."
+        description="AdoLearn now uses real AI generation through the Server proxy. Choose which GPT-5 model should build new courses."
       >
         <div className="space-y-5">
-          <label className="block">
-            <span className="text-sm font-black text-slate-700">Model name</span>
-            <input
-              type="text"
+          <label htmlFor="model-name" className="block">
+            <span className="text-sm font-black text-slate-700">Course generation model</span>
+            <select
+              id="model-name"
               value={settings.modelName}
               onChange={(event) => updateSetting('modelName', event.target.value || DEFAULT_SETTINGS.modelName)}
-              placeholder="gpt-5-nano"
               className="mt-2 w-full rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-950 ring-1 ring-slate-200 transition focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            />
+            >
+              {modelOptions.map((model) => (
+                <option key={model.value} value={model.value}>
+                  {model.label} ({model.value})
+                </option>
+              ))}
+            </select>
             <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">
-              Supported proxy models: gpt-5-nano, gpt-5-mini, and gpt-5. Unsupported values fall back to gpt-5-nano.
+              Server proxy generation is always on. Unsupported saved model values are reset to {DEFAULT_SETTINGS.modelName}.
             </span>
           </label>
 
-          <div>
-            <p className="text-sm font-black text-slate-700">Generation mode</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {generationModes.map((mode) => {
-                const isSelected = settings.generationMode === mode.value;
+          <div className="grid gap-3 md:grid-cols-3">
+            {modelOptions.map((model) => {
+              const isSelected = settings.modelName === model.value;
 
-                return (
-                  <button
-                    key={mode.value}
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => updateSetting('generationMode', mode.value)}
-                    className={`rounded-3xl p-4 text-left ring-1 transition ${
-                      isSelected
-                        ? 'bg-emerald-600 text-white ring-emerald-600 shadow-lg shadow-emerald-100'
-                        : 'bg-white text-slate-700 ring-slate-200 hover:-translate-y-0.5 hover:ring-emerald-200'
-                    }`}
-                  >
-                    <span className="block text-base font-black">{mode.label}</span>
-                    <span className={`mt-2 block text-sm font-semibold leading-5 ${isSelected ? 'text-emerald-50' : ''}`}>
-                      {mode.description}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+              return (
+                <div
+                  key={model.value}
+                  className={`rounded-3xl p-4 ring-1 transition ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white ring-emerald-600 shadow-lg shadow-emerald-100'
+                      : 'bg-white text-slate-700 ring-slate-200'
+                  }`}
+                >
+                  <p className="text-base font-black">{model.label}</p>
+                  <p className={`mt-2 text-sm font-semibold leading-5 ${isSelected ? 'text-emerald-50' : 'text-slate-500'}`}>
+                    {model.description}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </PageCard>

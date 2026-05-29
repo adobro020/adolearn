@@ -915,7 +915,7 @@ export function LessonPlayerPage({
     return (
       <div className="relative">
         <ConfettiBurst active={result.passed} />
-        <section className="min-h-[calc(100vh-8.5rem)] rounded-[2.25rem] bg-white p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 dark:bg-black dark:shadow-none dark:ring-zinc-800 sm:p-7">
+        <section className="min-h-[calc(100vh-8.5rem)] rounded-[2.25rem] bg-white p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 dark:bg-slate-950 dark:shadow-none dark:ring-zinc-800 sm:p-7">
           <div className="grid min-h-[calc(100vh-12rem)] gap-6 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
             <div
               className={classNames(
@@ -1032,7 +1032,7 @@ export function LessonPlayerPage({
   }
 
   return (
-    <section className="min-h-[calc(100vh-8.5rem)] rounded-[2.25rem] bg-white p-4 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 dark:bg-black dark:shadow-none dark:ring-zinc-800 sm:p-6">
+    <section className="min-h-[calc(100vh-8.5rem)] rounded-[2.25rem] bg-white p-4 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 dark:bg-slate-950 dark:shadow-none dark:ring-zinc-800 sm:p-6">
       <div className="grid min-h-[calc(100vh-11.5rem)] gap-6 lg:grid-cols-[0.78fr_1.22fr]">
         <aside className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100 dark:from-black dark:to-black dark:ring-emerald-500/20 sm:p-6">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/60 blur-3xl dark:bg-emerald-400/10" aria-hidden="true" />
@@ -1082,7 +1082,7 @@ export function LessonPlayerPage({
         </aside>
 
         <div className="flex flex-col gap-5 rounded-[2rem] bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-zinc-950 dark:ring-zinc-800 sm:p-6">
-          <div className="rounded-[2rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-black dark:ring-zinc-800 sm:p-6">
+          <div className="rounded-[2rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-zinc-800 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Prompt</p>
             <h2 className="mt-3 text-2xl font-black leading-9 tracking-tight text-slate-950 dark:text-white sm:text-3xl">
               {currentExercise.prompt}
@@ -1121,8 +1121,8 @@ export function LessonPlayerPage({
               className={classNames(
                 'rounded-[2rem] p-5 ring-1 sm:p-6',
                 feedback.isCorrect
-                  ? 'bg-emerald-50 text-emerald-900 ring-emerald-100 dark:bg-black dark:text-emerald-200 dark:ring-emerald-500/20'
-                  : 'bg-rose-50 text-rose-900 ring-rose-100 dark:bg-black dark:text-rose-200 dark:ring-rose-500/20'
+                  ? 'bg-emerald-50 text-emerald-900 ring-emerald-100 dark:bg-slate-950 dark:text-emerald-200 dark:ring-emerald-500/20'
+                  : 'bg-rose-50 text-rose-900 ring-rose-100 dark:bg-slate-950 dark:text-rose-200 dark:ring-rose-500/20'
               )}
               role="status"
             >

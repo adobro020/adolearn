@@ -3,16 +3,16 @@ import type {
   AppSettings,
   CourseStyle,
   Difficulty,
-  GenerationMode,
   LessonLength,
   ThemePreference
 } from '../types/settings';
 import { removeItem, safeGetJSON, safeSetJSON } from './storageService';
 
+const MODEL_VALUES = ['gpt-5-nano', 'gpt-5-mini', 'gpt-5'] as const;
+
 export const DEFAULT_SETTINGS: AppSettings = {
   modelName: 'gpt-5-nano',
   theme: 'system',
-  generationMode: 'mock',
   preferredDifficulty: 'Auto',
   preferredCourseStyle: 'Quick overview',
   preferredLessonLength: 'Medium',
@@ -41,8 +41,6 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
-const LEGACY_PROXY_MODE = String.fromCharCode(118, 101, 114, 99, 101, 108) + '_proxy';
-
 export function normalizeSettings(value: unknown): AppSettings {
   if (!isRecord(value)) {
     return { ...DEFAULT_SETTINGS };
@@ -62,17 +60,10 @@ export function normalizeSettings(value: unknown): AppSettings {
   ];
   const lessonLengthValues: readonly LessonLength[] = ['Short', 'Medium', 'Long'];
   const themeValues: readonly ThemePreference[] = ['system', 'light', 'dark'];
-  const generationModeValues: readonly GenerationMode[] = ['mock', 'server_proxy'];
 
   return {
-    modelName: asNonEmptyString(value.modelName, DEFAULT_SETTINGS.modelName),
+    modelName: isOneOf(value.modelName, MODEL_VALUES) ? value.modelName : DEFAULT_SETTINGS.modelName,
     theme: isOneOf(value.theme, themeValues) ? value.theme : DEFAULT_SETTINGS.theme,
-    generationMode:
-      value.generationMode === 'api' || value.generationMode === LEGACY_PROXY_MODE
-        ? 'server_proxy'
-        : isOneOf(value.generationMode, generationModeValues)
-          ? value.generationMode
-          : DEFAULT_SETTINGS.generationMode,
     preferredDifficulty: isOneOf(value.preferredDifficulty, difficultyValues)
       ? value.preferredDifficulty
       : DEFAULT_SETTINGS.preferredDifficulty,
@@ -101,7 +92,7 @@ export function getSettings(): AppSettings {
   // Rewrite older settings without legacy secret fields or retired generation modes.
   if (
     isRecord(storedSettings) &&
-    ('apiKey' in storedSettings || storedSettings.generationMode === 'api' || storedSettings.generationMode === LEGACY_PROXY_MODE)
+    ('apiKey' in storedSettings || 'generationMode' in storedSettings)
   ) {
     safeSetJSON(STORAGE_KEYS.settings, normalizedSettings);
   }

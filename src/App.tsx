@@ -5,12 +5,21 @@ import { CourseMapPage } from './pages/CourseMapPage';
 import { CreateCoursePage } from './pages/CreateCoursePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LessonPlayerPage } from './pages/LessonPlayerPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { getSettings } from './services/settingsService';
 import type { AppSettings, ThemePreference } from './types/settings';
 import type { PageId } from './types/navigation';
 
+type AppRoutePage = PageId | 'notFound';
+
+interface ParsedRoute {
+  page: AppRoutePage;
+  courseId: string | null;
+  lessonId: string | null;
+  reviewCourseId: string | null;
+}
 
 function shouldUseDarkTheme(theme: ThemePreference): boolean {
   if (theme === 'dark') {
@@ -24,12 +33,108 @@ function shouldUseDarkTheme(theme: ThemePreference): boolean {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
 }
 
+function cleanPathname(pathname: string): string {
+  if (!pathname || pathname === '/') {
+    return '/';
+  }
+
+  return pathname.replace(/\/+$|^\s+|\s+$/g, '') || '/';
+}
+
+function safeDecode(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function parseRoute(pathname: string): ParsedRoute {
+  const path = cleanPathname(pathname);
+  const parts = path.split('/').filter(Boolean);
+
+  if (parts.length === 0) {
+    return { page: 'dashboard', courseId: null, lessonId: null, reviewCourseId: null };
+  }
+
+  if (parts.length === 1 && parts[0] === 'create') {
+    return { page: 'create', courseId: null, lessonId: null, reviewCourseId: null };
+  }
+
+  if (parts.length === 1 && parts[0] === 'settings') {
+    return { page: 'settings', courseId: null, lessonId: null, reviewCourseId: null };
+  }
+
+  if (parts[0] === 'review' && parts.length <= 2) {
+    return { page: 'review', courseId: null, lessonId: null, reviewCourseId: safeDecode(parts[1]) };
+  }
+
+  if (parts[0] === 'course' && parts.length === 2) {
+    return { page: 'courseMap', courseId: safeDecode(parts[1]), lessonId: null, reviewCourseId: null };
+  }
+
+  if (parts[0] === 'course' && parts.length === 4 && parts[2] === 'lesson') {
+    return {
+      page: 'lessonPlayer',
+      courseId: safeDecode(parts[1]),
+      lessonId: safeDecode(parts[3]),
+      reviewCourseId: null
+    };
+  }
+
+  return { page: 'notFound', courseId: null, lessonId: null, reviewCourseId: null };
+}
+
+function coursePath(courseId: string): string {
+  return `/course/${encodeURIComponent(courseId)}`;
+}
+
+function lessonPath(courseId: string, lessonId: string): string {
+  return `${coursePath(courseId)}/lesson/${encodeURIComponent(lessonId)}`;
+}
+
+function reviewPath(courseId?: string | null): string {
+  return courseId ? `/review/${encodeURIComponent(courseId)}` : '/review';
+}
+
+function navPath(pageId: PageId): string {
+  if (pageId === 'create') {
+    return '/create';
+  }
+
+  if (pageId === 'settings') {
+    return '/settings';
+  }
+
+  return '/';
+}
+
 export default function App() {
-  const [activePage, setActivePage] = useState<PageId>('dashboard');
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-  const [selectedReviewCourseId, setSelectedReviewCourseId] = useState<string | null>(null);
+  const initialRoute = parseRoute(window.location.pathname);
+  const [activePage, setActivePage] = useState<AppRoutePage>(initialRoute.page);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(initialRoute.courseId);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(initialRoute.lessonId);
+  const [selectedReviewCourseId, setSelectedReviewCourseId] = useState<string | null>(initialRoute.reviewCourseId);
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => getSettings().theme);
+
+  function applyRoute(route: ParsedRoute) {
+    setActivePage(route.page);
+    setSelectedCourseId(route.courseId);
+    setSelectedLessonId(route.lessonId);
+    setSelectedReviewCourseId(route.reviewCourseId);
+  }
+
+  function navigate(path: string) {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+
+    applyRoute(parseRoute(path));
+  }
 
   useEffect(() => {
     function applyTheme(theme: ThemePreference) {
@@ -59,46 +164,50 @@ export default function App() {
     };
   }, [themePreference]);
 
+  useEffect(() => {
+    function handlePopState() {
+      applyRoute(parseRoute(window.location.pathname));
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   function openDashboard() {
-    setActivePage('dashboard');
+    navigate('/');
   }
 
   function openCreateCourse() {
-    setActivePage('create');
+    navigate('/create');
   }
 
   function openSettings() {
-    setActivePage('settings');
+    navigate('/settings');
   }
 
   function openCourseMap(courseId: string) {
-    setSelectedCourseId(courseId);
-    setSelectedLessonId(null);
-    setActivePage('courseMap');
+    navigate(coursePath(courseId));
   }
 
   function openLessonPlayer(courseId: string, lessonId: string) {
-    setSelectedCourseId(courseId);
-    setSelectedLessonId(lessonId);
-    setActivePage('lessonPlayer');
+    navigate(lessonPath(courseId, lessonId));
   }
 
   function openReview(courseId?: string | null) {
-    setSelectedReviewCourseId(courseId ?? null);
-    if (courseId) {
-      setSelectedCourseId(courseId);
-    }
-    setSelectedLessonId(null);
-    setActivePage('review');
+    navigate(reviewPath(courseId));
   }
 
   function returnToCourseMap() {
     if (selectedCourseId) {
-      setActivePage('courseMap');
+      navigate(coursePath(selectedCourseId));
       return;
     }
 
     openDashboard();
+  }
+
+  function handlePageNav(pageId: PageId) {
+    navigate(navPath(pageId));
   }
 
   function renderPage() {
@@ -134,6 +243,8 @@ export default function App() {
             onBackToDashboard={openDashboard}
           />
         );
+      case 'notFound':
+        return <NotFoundPage onGoHome={openDashboard} onCreateCourse={openCreateCourse} />;
       case 'dashboard':
       default:
         return (
@@ -148,12 +259,13 @@ export default function App() {
   }
 
   const isLessonFullscreen = activePage === 'lessonPlayer';
+  const shouldShowBottomNav = activePage !== 'lessonPlayer' && activePage !== 'notFound';
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#d1fae5,_transparent_34rem),linear-gradient(180deg,_#f8fafc,_#eef2ff)] text-slate-950 transition-colors duration-300 dark:bg-black dark:text-slate-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#d1fae5,_transparent_34rem),linear-gradient(180deg,_#f8fafc,_#eef2ff)] text-slate-950 transition-colors duration-300 dark:text-slate-100">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 pb-28 md:px-6 md:py-6">
-        <Header />
-        {!isLessonFullscreen ? <BottomNav activePage={activePage} onPageChange={setActivePage} /> : null}
+        <Header onLogoClick={openDashboard} />
+        {shouldShowBottomNav ? <BottomNav activePage={activePage as PageId} onPageChange={handlePageNav} /> : null}
 
         <main
           className={isLessonFullscreen ? 'mx-auto mt-4 w-full max-w-6xl flex-1' : 'mx-auto mt-6 w-full max-w-5xl flex-1'}
