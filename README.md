@@ -183,7 +183,7 @@ To enable Server proxy mode:
 1. Go to the hosting dashboard.
 2. Open the AdoLearn project.
 3. Go to **Project Settings**.
-4. Open **Environmewnt Variables**.
+4. Open **Environment Variables**.
 5. Add:
    - Name: `OPENAI_API_KEY`
    - Value: your OpenAI API key

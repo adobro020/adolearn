@@ -54,6 +54,9 @@ interface GenerateCourseAPISuccessPayload {
 
 const GENERATE_COURSE_API_URL = '/api/generate-course';
 const MAX_VALIDATION_ERRORS_IN_MESSAGE = 8;
+const MAX_PROXY_SOURCE_MATERIAL_CHARS = 90_000;
+const LONG_SOURCE_CONDENSED_WARNING =
+  'Long source material was condensed before sending it to the course generator to keep the request reliable.';
 
 function getSourcePreview(sourceMaterial: string): string {
   return sourceMaterial.replace(/\s+/g, ' ').trim().slice(0, 500);
@@ -64,11 +67,36 @@ function cleanModelName(modelName?: string): string | undefined {
   return cleaned || undefined;
 }
 
+function compactSourceMaterial(sourceMaterial: string): string {
+  return sourceMaterial
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function prepareSourceMaterialForProxy(sourceMaterial: string): { sourceMaterial: string; wasCondensed: boolean } {
+  const compacted = compactSourceMaterial(sourceMaterial);
+
+  if (compacted.length <= MAX_PROXY_SOURCE_MATERIAL_CHARS) {
+    return { sourceMaterial: compacted, wasCondensed: false };
+  }
+
+  const headLength = 50_000;
+  const tailLength = 35_000;
+  const omittedCharacters = compacted.length - headLength - tailLength;
+  const separator = `\n\n[Middle content condensed for reliable generation. Approximately ${omittedCharacters.toLocaleString()} characters omitted. Use the beginning and ending context only when supported by the pasted material.]\n\n`;
+
+  return {
+    sourceMaterial: `${compacted.slice(0, headLength)}${separator}${compacted.slice(-tailLength)}`,
+    wasCondensed: true
+  };
+}
+
 function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | null): AICourseGenerationError {
   const code = payload?.code ?? '';
   const details = payload?.details;
 
-  if (status === 413 || code === 'source_too_large' || code === 'request_too_large') {
+  if (status === 413 || status === 422 || code === 'source_too_large' || code === 'request_too_large') {
     return new AICourseGenerationError(
       'source_too_large',
       'The source material is too large. Try a shorter paste.',
@@ -134,7 +162,10 @@ function extractCoursePayload(payload: unknown): unknown {
   return payload;
 }
 
-async function callServerProxy(input: GenerateCourseWithAIInput): Promise<GenerateCourseAPISuccessPayload> {
+async function callServerProxy(
+  input: GenerateCourseWithAIInput,
+  preparedSourceMaterial: string
+): Promise<GenerateCourseAPISuccessPayload> {
   let response: Response;
 
   try {
@@ -144,7 +175,7 @@ async function callServerProxy(input: GenerateCourseWithAIInput): Promise<Genera
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        sourceMaterial: input.sourceMaterial,
+        sourceMaterial: preparedSourceMaterial,
         optionalTitle: input.optionalTitle,
         difficulty: input.difficulty,
         courseStyle: input.courseStyle,
@@ -179,14 +210,18 @@ export async function generateCourseWithAI({
   lessonLength,
   modelName
 }: GenerateCourseWithAIInput): Promise<GenerateCourseWithAIResult> {
-  const payload = await callServerProxy({
-    sourceMaterial,
-    optionalTitle,
-    difficulty,
-    courseStyle,
-    lessonLength,
-    modelName
-  });
+  const preparedSource = prepareSourceMaterialForProxy(sourceMaterial);
+  const payload = await callServerProxy(
+    {
+      sourceMaterial,
+      optionalTitle,
+      difficulty,
+      courseStyle,
+      lessonLength,
+      modelName
+    },
+    preparedSource.sourceMaterial
+  );
 
   const rawCourse = extractCoursePayload(payload);
 
@@ -226,6 +261,7 @@ export async function generateCourseWithAI({
   return {
     course: normalizedCourse,
     validationWarnings: [
+      ...(preparedSource.wasCondensed ? [LONG_SOURCE_CONDENSED_WARNING] : []),
       ...(payload.validationWarnings ?? []),
       ...draftValidation.warnings,
       ...normalizedValidation.warnings

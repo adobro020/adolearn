@@ -5,12 +5,13 @@ import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
 import { generateCourseWithAI, AICourseGenerationError } from '../services/aiCourseGenerationService';
 import { saveCourse } from '../services/courseService';
 import { generateMockCourse } from '../services/mockCourseGenerator';
+import { playLessonCompleteSound } from '../services/soundService';
 import { initializeCourseProgress } from '../services/progressService';
 import { getSettings } from '../services/settingsService';
 import { isStorageAvailable } from '../services/storageService';
 import type { Course } from '../types/course';
-import { classNames } from '../utils/classNames';
 import type { AppSettings, CourseStyle, Difficulty, LessonLength } from '../types/settings';
+import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface CreateCoursePageProps {
   onCourseCreated: (courseId: string) => void;
@@ -99,29 +100,6 @@ function SelectField<T extends string>({
   );
 }
 
-function getStepState(index: number, activeStepIndex: number, isSuccess: boolean) {
-  if (isSuccess || index < activeStepIndex) {
-    return {
-      symbol: '✓',
-      label: 'Complete',
-      className: 'bg-emerald-600 text-white'
-    };
-  }
-
-  if (index === activeStepIndex) {
-    return {
-      symbol: '•',
-      label: 'In progress',
-      className: 'bg-slate-950 text-white animate-pulse'
-    };
-  }
-
-  return {
-    symbol: `${index + 1}`,
-    label: 'Pending',
-    className: 'bg-slate-100 text-slate-500'
-  };
-}
 
 function getGenerationModeLabel(settings: AppSettings): string {
   if (settings.generationMode === 'server_proxy') {
@@ -129,6 +107,57 @@ function getGenerationModeLabel(settings: AppSettings): string {
   }
 
   return 'Mock';
+}
+
+
+function CompactGenerationStatus({
+  activeStepIndex,
+  isSuccess,
+  generationModeLabel
+}: {
+  activeStepIndex: number;
+  isSuccess: boolean;
+  generationModeLabel: string;
+}) {
+  const visibleStepIndex = Math.min(Math.max(activeStepIndex, 0), GENERATION_STEPS.length - 1);
+  const progressValue = isSuccess
+    ? 100
+    : Math.max(10, Math.round(((visibleStepIndex + 1) / GENERATION_STEPS.length) * 100));
+  const activeStep = GENERATION_STEPS[visibleStepIndex];
+
+  return (
+    <div
+      className="rounded-[1.75rem] bg-emerald-50 p-4 ring-1 ring-emerald-200 shadow-sm dark:bg-black dark:ring-emerald-400/60"
+      role="status"
+      aria-live="polite"
+      aria-busy={!isSuccess}
+    >
+      <div className="flex items-start gap-4">
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500 text-2xl text-white shadow-lg shadow-emerald-900/20 motion-safe:animate-bounce-soft dark:bg-emerald-400 dark:text-black">
+          {isSuccess ? '✓' : '✦'}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
+            {generationModeLabel} generation
+          </p>
+          <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">
+            {isSuccess ? 'Course ready — opening your map…' : activeStep.label}
+          </h2>
+          <p className="mt-1 text-sm font-semibold leading-6 text-slate-600 dark:text-zinc-300">
+            {isSuccess ? 'Saved successfully. Redirecting now.' : activeStep.detail}
+          </p>
+          <div className="mt-4">
+            <ProgressBar
+              value={progressValue}
+              label="Course generation progress"
+              tone={isSuccess ? 'emerald' : 'sky'}
+              size="lg"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function getCourseByteSize(course: Course): number {
@@ -244,17 +273,18 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       setSuccessMessage(null);
       setLastWarning(null);
       setActiveStepIndex(-1);
-      return;
+        return;
     }
 
     resetMessages();
+    setActiveStepIndex(0);
     setIsGenerating(true);
 
     try {
       const currentSettings = getSettings();
       let generatedCourse: Course | null = null;
 
-      await advanceToStep(0, 300);
+      await sleep(120);
       await advanceToStep(1, 350);
       await advanceToStep(2, 350);
       await advanceToStep(3, 350);
@@ -278,17 +308,20 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       }
 
       initializeCourseProgress(generatedCourse);
+      playLessonCompleteSound();
       setSuccessMessage('Course generated and saved locally! Opening the course map...');
       setActiveStepIndex(GENERATION_STEPS.length);
       await sleep(650);
       onCourseCreated(generatedCourse.id);
     } catch (generationError) {
-      setError(formatGenerationError(generationError));
-      setActiveStepIndex(-1);
+      const message = formatGenerationError(generationError);
+      setError(message);
+      setActiveStepIndex((currentStepIndex) => (currentStepIndex < 0 ? 0 : currentStepIndex));
     } finally {
       setIsGenerating(false);
     }
   }
+
 
   return (
     <div className="space-y-6">
@@ -305,11 +338,14 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           }}
         >
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-4 ring-1 ring-emerald-100 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <div>
+            <div className="flex items-center gap-4">
+              <img src={ROBOT_GRAPHICS.workflow} alt="Robot turning material into lesson cards" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
+              <div>
               <p className="text-sm font-black text-slate-950">Source readiness</p>
               <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
                 More detail usually creates better lessons. Short sources still work, especially in mock mode.
               </p>
+              </div>
             </div>
             <div className="mt-3 min-w-48 sm:mt-0">
               <ProgressBar
@@ -361,6 +397,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
             </div>
 
             <aside className="space-y-4 rounded-[1.75rem] bg-slate-50 p-4 ring-1 ring-slate-200 sm:p-5">
+              <img src={ROBOT_GRAPHICS.teacher} alt="Robot teaching at a whiteboard" className="mx-auto h-44 w-full object-contain" />
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
                   Course settings
@@ -396,6 +433,14 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
               </div>
             </aside>
           </div>
+
+          {isGenerating || successMessage ? (
+            <CompactGenerationStatus
+              activeStepIndex={activeStepIndex}
+              isSuccess={Boolean(successMessage)}
+              generationModeLabel={generationModeLabel}
+            />
+          ) : null}
 
           {error ? (
             <NoticeBanner tone="error" title="Course generation needs attention">
@@ -451,43 +496,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           </div>
         </form>
       </PageCard>
-
-      {(isGenerating || successMessage) && (
-        <section className="rounded-[2rem] bg-white p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 sm:p-7" aria-live="polite" aria-busy={isGenerating}>
-          <div className="mb-5">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600">
-              {generationModeLabel} generation
-            </p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
-              Turning your material into a course
-            </h2>
-          </div>
-
-          <ol className="space-y-3">
-            {GENERATION_STEPS.map((step, index) => {
-              const stepState = getStepState(index, activeStepIndex, Boolean(successMessage));
-
-              return (
-                <li
-                  key={step.label}
-                  className={classNames("flex gap-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 transition", index === activeStepIndex && isGenerating ? "bg-gradient-to-r from-slate-50 via-white to-slate-50 motion-safe:animate-shimmer" : "")}
-                >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${stepState.className}`}
-                    aria-label={stepState.label}
-                  >
-                    {stepState.symbol}
-                  </div>
-                  <div>
-                    <p className="font-black text-slate-950">{step.label}</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">{step.detail}</p>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      )}
     </div>
   );
 }

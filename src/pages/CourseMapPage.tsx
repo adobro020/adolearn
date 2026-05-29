@@ -7,6 +7,7 @@ import { getReviewSummary } from '../services/reviewService';
 import type { Course, Lesson } from '../types/course';
 import type { CourseProgress } from '../types/progress';
 import { classNames } from '../utils/classNames';
+import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface CourseMapPageProps {
   courseId: string | null;
@@ -353,13 +354,16 @@ export function CourseMapPage({
           </div>
 
           <div className="rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <div>
+            <div className="flex items-center gap-4">
+              <img src={ROBOT_GRAPHICS.audio} alt="Robot reviewing audio notes" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
+              <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-700">
                 Review this course
               </p>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
                 {reviewSummary?.totalItems ?? 0} review items available from missed questions, weak concepts, and completed lessons.
               </p>
+              </div>
             </div>
             <button
               type="button"

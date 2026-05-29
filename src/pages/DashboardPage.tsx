@@ -11,6 +11,7 @@ import {
   resetCourseProgress
 } from '../services/progressService';
 import { getReviewSummary } from '../services/reviewService';
+import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface DashboardPageProps {
   onCreateCourse: () => void;
@@ -265,15 +266,19 @@ export function DashboardPage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 transition-colors sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-6">
-        <div>
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600">Dashboard</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Ready for your next lesson?</h2>
-          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-600">
-            Continue a saved path, create something new, or review the ideas that need another pass.
-          </p>
+      <section className="relative overflow-hidden rounded-[2rem] bg-white/90 p-5 shadow-sm shadow-slate-200/80 ring-1 ring-slate-200/80 transition-colors sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-6">
+        <div className="absolute -right-12 -top-16 h-56 w-56 rounded-full bg-emerald-100/70 blur-3xl" aria-hidden="true" />
+        <div className="relative flex min-w-0 items-center gap-4">
+          <img src={ROBOT_GRAPHICS.welcome} alt="AdoLearn robot waving" className="hidden h-32 w-32 shrink-0 object-contain sm:block" />
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600">Dashboard</p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Ready for your next lesson?</h2>
+            <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-600">
+              Continue a saved path, create something new, or review the ideas that need another pass.
+            </p>
+          </div>
         </div>
-        <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:flex-row">
+        <div className="relative mt-4 flex flex-col gap-3 sm:mt-0 sm:flex-row">
           <button
             type="button"
             onClick={onCreateCourse}
@@ -312,7 +317,9 @@ export function DashboardPage({
       >
         <div className="space-y-5">
           <div className="rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-6">
-            <div>
+            <div className="flex items-center gap-4">
+              <img src={ROBOT_GRAPHICS.audio} alt="Robot listening to study notes" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
+              <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-700">
                 {reviewSummary.totalItems} review items available
               </p>
@@ -324,6 +331,7 @@ export function DashboardPage({
                   ? `Top weak areas: ${weakConceptPreview.map((concept) => concept.concept).join(', ')}`
                   : 'Complete lessons and missed questions will appear here.'}
               </p>
+              </div>
             </div>
             <button
               type="button"
@@ -343,7 +351,9 @@ export function DashboardPage({
       >
         {continueCourse ? (
           <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100 sm:flex sm:items-center sm:justify-between sm:gap-6">
-            <div>
+            <div className="flex items-center gap-4">
+              <img src={ROBOT_GRAPHICS.workflow} alt="Robot organizing course cards" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
+              <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">
                 Recommended next
               </p>
@@ -356,6 +366,7 @@ export function DashboardPage({
                   ? ` · Last studied ${formatDate(continueCourse.progress?.lastStudiedAt)}`
                   : ' · Ready to start'}
               </p>
+              </div>
             </div>
             <button
               type="button"
