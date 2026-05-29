@@ -179,7 +179,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lastWarning, setLastWarning] = useState<string | null>(null);
-  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
   const [isDraggingSourceFile, setIsDraggingSourceFile] = useState(false);
   const [isReadingSourceFiles, setIsReadingSourceFiles] = useState(false);
@@ -217,7 +216,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     setError(null);
     setSuccessMessage(null);
     setLastWarning(null);
-    setUploadNotice(null);
   }
 
   function handleUseDemoMaterial() {
@@ -249,6 +247,9 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     const acceptedNames: string[] = [];
     const skippedNames: string[] = [];
     setIsReadingSourceFiles(true);
+    setError(null);
+    setSuccessMessage(null);
+    setLastWarning(null);
 
     for (const file of selectedFiles) {
       if (file.size > MAX_UPLOAD_FILE_BYTES || !isSupportedTxtFile(file)) {
@@ -288,29 +289,23 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     }
 
     if (acceptedBlocks.length === 0) {
-      setUploadNotice(
-        'No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.'
-      );
+      setError('No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.');
       setIsReadingSourceFiles(false);
       return;
     }
 
     if (skippedNames.length > 0) {
-      setUploadNotice(
-        `Uploaded ${acceptedNames.length} TXT file${acceptedNames.length === 1 ? '' : 's'}. Skipped unsupported, oversized, or over-limit file${skippedNames.length === 1 ? '' : 's'}: ${skippedNames.join(', ')}.`
+      setLastWarning(
+        `Some files were skipped because they were unsupported, oversized, empty, or over the 50,000-character limit: ${skippedNames.join(', ')}.`
       );
-      setIsReadingSourceFiles(false);
-      return;
     }
 
-    setUploadNotice(`Uploaded ${acceptedNames.length} TXT file${acceptedNames.length === 1 ? '' : 's'} successfully. The paste box is locked until you remove the file upload.`);
     setIsReadingSourceFiles(false);
   }
 
   function handleRemoveUploadedFiles() {
     setUploadedFileNames([]);
     setSourceMaterial('');
-    setUploadNotice('File upload removed. You can paste material or upload a different TXT file.');
     setError(null);
     setSuccessMessage(null);
     setLastWarning(null);
@@ -506,84 +501,85 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                 />
               </label>
 
-              <div
-                className={classNames(
-                  'rounded-[1.5rem] border-2 border-dashed p-5 text-center transition',
-                  isDraggingSourceFile
-                    ? 'border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100'
-                    : 'border-slate-200 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50/60'
-                )}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <input
-                  id="source-file-upload"
-                  type="file"
-                  multiple
-                  accept={ACCEPTED_SOURCE_FILE_TYPES}
-                  onChange={handleFileInputChange}
-                  disabled={isGenerating || isReadingSourceFiles}
-                  className="sr-only"
-                />
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl shadow-sm ring-1 ring-slate-200" aria-hidden="true">
-                  {isReadingSourceFiles ? '…' : hasUploadedFiles ? '✓' : '⇧'}
-                </div>
-                <p className="mt-3 text-sm font-black text-slate-950">
-                  {isReadingSourceFiles ? 'Reading uploaded file…' : hasUploadedFiles ? 'File material is uploaded' : 'Drop files here, or upload course material'}
-                </p>
-                <p className="mx-auto mt-2 max-w-md text-xs font-bold leading-5 text-slate-500">
-                  {hasUploadedFiles
-                    ? 'AdoLearn will generate from the uploaded file content. Remove it to re-enable manual pasting.'
-                    : 'Only TXT files are supported right now. Support for other file types will be added in a future update.'}
-                </p>
-                {hasUploadedFiles ? (
-                  <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-emerald-200">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">Uploaded</p>
-                    <p className="mt-1 truncate text-sm font-black text-slate-800">
+              {hasUploadedFiles ? (
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="truncate text-sm font-black text-slate-900">
                       {uploadedFileNames.join(', ')}
                     </p>
                     <button
                       type="button"
                       onClick={handleRemoveUploadedFiles}
                       disabled={isGenerating || isReadingSourceFiles}
-                      className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 ring-1 ring-rose-100 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="w-fit rounded-xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-700 ring-1 ring-rose-100 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Remove file
+                      Delete
                     </button>
                   </div>
-                ) : (
-                  <label
-                    htmlFor="source-file-upload"
-                    className="mt-4 inline-flex cursor-pointer rounded-2xl bg-white px-4 py-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-50"
-                  >
-                    Choose files
-                  </label>
-                )}
-              </div>
-
-              <label htmlFor="source-material" className="block">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                  <span className="text-sm font-black text-slate-700">Learning material</span>
-                  <span className="text-xs font-bold text-slate-400">
-                    {hasUploadedFiles ? `${characterCount.toLocaleString()} / ${SOURCE_MATERIAL_CHARACTER_LIMIT.toLocaleString()} characters from TXT upload` : `${characterCount.toLocaleString()} / ${SOURCE_MATERIAL_CHARACTER_LIMIT.toLocaleString()} characters`}
-                  </span>
                 </div>
-                <textarea
-                  id="source-material"
-                  value={sourceMaterial}
-                  onChange={(event) => {
-                    setSourceMaterial(getLimitedSourceMaterial(event.target.value));
-                    if (error || successMessage || lastWarning) {
-                      resetMessages();
-                    }
-                  }}
-                  disabled={isGenerating || hasUploadedFiles}
-                  maxLength={SOURCE_MATERIAL_CHARACTER_LIMIT}
-                  className="mt-2 min-h-72 w-full resize-y rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
-                  placeholder={hasUploadedFiles ? 'Remove the uploaded file to paste material manually.' : 'Paste course notes, an article, a podcast transcript, lecture notes, or a study guide here...'}
-                />
-              </label>
+              ) : (
+                <>
+                  <div
+                    className={classNames(
+                      'rounded-[1.5rem] border-2 border-dashed p-5 text-center transition',
+                      isDraggingSourceFile
+                        ? 'border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100'
+                        : 'border-slate-200 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50/60'
+                    )}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <input
+                      id="source-file-upload"
+                      type="file"
+                      multiple
+                      accept={ACCEPTED_SOURCE_FILE_TYPES}
+                      onChange={handleFileInputChange}
+                      disabled={isGenerating || isReadingSourceFiles}
+                      className="sr-only"
+                    />
+                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl shadow-sm ring-1 ring-slate-200" aria-hidden="true">
+                      {isReadingSourceFiles ? '…' : '⇧'}
+                    </div>
+                    <p className="mt-3 text-sm font-black text-slate-950">
+                      {isReadingSourceFiles ? 'Reading uploaded file…' : 'Drop files here, or upload course material'}
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md text-xs font-bold leading-5 text-slate-500">
+                      Only TXT files are supported right now. Support for other file types will be added in a future update.
+                    </p>
+                    <label
+                      htmlFor="source-file-upload"
+                      className="mt-4 inline-flex cursor-pointer rounded-2xl bg-white px-4 py-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-50"
+                    >
+                      Choose file
+                    </label>
+                  </div>
+
+                  <label htmlFor="source-material" className="block">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                      <span className="text-sm font-black text-slate-700">Learning material</span>
+                      <span className="text-xs font-bold text-slate-400">
+                        {characterCount.toLocaleString()} / {SOURCE_MATERIAL_CHARACTER_LIMIT.toLocaleString()} characters
+                      </span>
+                    </div>
+                    <textarea
+                      id="source-material"
+                      value={sourceMaterial}
+                      onChange={(event) => {
+                        setSourceMaterial(getLimitedSourceMaterial(event.target.value));
+                        if (error || successMessage || lastWarning) {
+                          resetMessages();
+                        }
+                      }}
+                      disabled={isGenerating}
+                      maxLength={SOURCE_MATERIAL_CHARACTER_LIMIT}
+                      className="mt-2 min-h-72 w-full resize-y rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                      placeholder="Paste course notes, an article, a podcast transcript, lecture notes, or a study guide here..."
+                    />
+                  </label>
+                </>
+              )}
           </div>
 
           {error ? (
@@ -601,12 +597,6 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
           {lastWarning ? (
             <NoticeBanner tone="info" title="Course cleaned up">
               {lastWarning}
-            </NoticeBanner>
-          ) : null}
-
-          {uploadNotice ? (
-            <NoticeBanner tone="info" title="Files added">
-              {uploadNotice}
             </NoticeBanner>
           ) : null}
 

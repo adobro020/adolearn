@@ -76,7 +76,7 @@ function parseRoute(pathname: string): ParsedRoute {
     return emptyRoute('settings');
   }
 
-  if (parts[0] === 'study' && parts.length === 2) {
+  if (parts[0] === 'study-techniques' && parts.length === 2) {
     return { ...emptyRoute('studyTechnique'), studyTechniqueId: safeDecode(parts[1]) };
   }
 

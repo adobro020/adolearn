@@ -7,10 +7,10 @@ interface FooterProps {
 }
 
 const STUDY_LINKS = [
-  { label: 'Active recall', path: '/study/active-recall' },
-  { label: 'Spaced repetition', path: '/study/spaced-repetition' },
-  { label: 'Interleaving', path: '/study/interleaving' },
-  { label: 'Focused sessions', path: '/study/focused-sessions' }
+  { label: 'Active recall', path: '/study-techniques/active-recall' },
+  { label: 'Spaced repetition', path: '/study-techniques/spaced-repetition' },
+  { label: 'Interleaving', path: '/study-techniques/interleaving' },
+  { label: 'Focused sessions', path: '/study-techniques/focused-sessions' }
 ];
 
 const PRODUCT_LINKS = [
