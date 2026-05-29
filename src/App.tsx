@@ -7,6 +7,7 @@ import { LessonPlayerPage } from './pages/LessonPlayerPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { getCourses } from './services/courseService';
 import { getSettings } from './services/settingsService';
 import type { AppSettings, ThemePreference } from './types/settings';
 import type { PageId } from './types/navigation';
@@ -183,7 +184,8 @@ export default function App() {
       notFound: 'Page Not Found'
     };
 
-    document.title = `${pageTitles[activePage]} · AdoLearn`;
+    const dashboardTitle = activePage === 'dashboard' && getCourses().length === 0 ? 'Create Personalized Courses' : pageTitles[activePage];
+    document.title = `${dashboardTitle} | AdoLearn`;
     document.body.dataset.page = activePage;
   }, [activePage]);
 
@@ -266,7 +268,6 @@ export default function App() {
             onCreateCourse={openCreateCourse}
             onOpenCourse={openCourseMap}
             onOpenSettings={openSettings}
-            onOpenReview={openReview}
           />
         );
     }

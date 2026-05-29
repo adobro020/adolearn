@@ -81,13 +81,7 @@ function getCurrentLessonId(course: Course, progress: CourseProgress | null): st
     return lessons[0]?.id ?? null;
   }
 
-  const currentUnlockedLesson = lessons.find(
-    (lesson) =>
-      progress.unlockedLessons.includes(lesson.id) &&
-      !progress.completedLessons.includes(lesson.id)
-  );
-
-  return currentUnlockedLesson?.id ?? lessons[0]?.id ?? null;
+  return lessons.find((lesson) => !progress.completedLessons.includes(lesson.id))?.id ?? lessons[0]?.id ?? null;
 }
 
 function getLessonKindLabel(lesson: Lesson): string {
@@ -107,9 +101,6 @@ function getLessonBadge(lesson: Lesson, lessonNumber: number, completed: boolean
     return '✓';
   }
 
-  if (!unlocked) {
-    return '🔒';
-  }
 
   if (lesson.type === 'review') {
     return '↻';
@@ -139,7 +130,7 @@ function LessonNode({
 }) {
   const isReview = lesson.type === 'review';
   const isFinalChallenge = lesson.type === 'final_challenge';
-  const canOpen = unlocked || completed;
+  const canOpen = true;
 
   return (
     <li className="relative flex gap-4 py-4 first:pt-1 last:pb-1 sm:gap-5">
@@ -213,7 +204,7 @@ function LessonNode({
           {lesson.summary || 'A bite-sized lesson with quick practice exercises.'}
         </p>
         <p className="mt-3 text-sm font-black text-slate-500">
-          {lesson.estimatedMinutes} min · {lesson.exercises.length} exercises
+          {lesson.estimatedMinutes} min | {lesson.exercises.length} exercises
         </p>
       </button>
     </li>
@@ -297,20 +288,13 @@ export function CourseMapPage({
 
   let lessonCounter = 0;
 
-  function handleLessonClick(lesson: Lesson, unlocked: boolean, completed: boolean) {
+  function handleLessonClick(lesson: Lesson) {
     if (!course) {
       return;
     }
 
-    if (unlocked || completed) {
-      setLockedMessage(null);
-      onOpenLesson(course.id, lesson.id);
-      return;
-    }
-
-    setLockedMessage(
-      `“${lesson.title}” is locked. Complete the current unlocked lesson first to keep moving along the path.`
-    );
+    setLockedMessage(null);
+    onOpenLesson(course.id, lesson.id);
   }
 
   return (
@@ -318,7 +302,7 @@ export function CourseMapPage({
       <PageCard
         eyebrow="Course map"
         title={course.title}
-        description={course.description || 'Follow the path section by section. Tap an unlocked lesson to practice.'}
+        description={course.description || 'Follow the path section by section. Every lesson is available to open at any time.'}
       >
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-3">
@@ -355,17 +339,17 @@ export function CourseMapPage({
 
           <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:p-6">
             <div className="absolute -right-6 bottom-0 hidden md:block" aria-hidden="true">
-              <img src={ROBOT_GRAPHICS.audio} alt="" className="h-36 w-auto object-contain" />
+              <img src={ROBOT_GRAPHICS.celebration} alt="" className="h-36 w-auto object-contain" />
             </div>
             <div className="relative flex flex-col gap-4 md:pr-36 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
               <div className="flex items-center gap-4">
-                <img src={ROBOT_GRAPHICS.audio} alt="Robot reviewing audio notes" className="h-20 w-20 shrink-0 object-contain md:hidden" />
+                <img src={ROBOT_GRAPHICS.celebration} alt="Robot holding a learning award" className="h-20 w-20 shrink-0 object-contain md:hidden" />
                 <div>
                   <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-700">
-                    Review this course
+                    Comprehensive course review
                   </p>
                   <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-                    {reviewSummary?.totalItems ?? 0} review items available from missed questions, weak concepts, and completed lessons.
+                    Take one full test with all {reviewSummary?.totalItems ?? 0} questions from every lesson in this course.
                   </p>
                 </div>
               </div>
@@ -374,16 +358,10 @@ export function CourseMapPage({
                 onClick={() => onOpenReview(course.id)}
                 className="w-full rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition hover:-translate-y-0.5 hover:bg-amber-600 sm:w-auto"
               >
-                Start Review
+                Comprehensive Review
               </button>
             </div>
           </div>
-
-          {lockedMessage ? (
-            <NoticeBanner tone="warning" title="Lesson locked">
-              {lockedMessage} Look for the highlighted current lesson to continue.
-            </NoticeBanner>
-          ) : null}
 
           <button
             type="button"
@@ -467,8 +445,8 @@ export function CourseMapPage({
                       <ol>
                         {numberedLessons.map(({ lesson, globalLessonNumber }) => {
                           const completed = progress?.completedLessons.includes(lesson.id) ?? false;
-                          const unlocked = progress?.unlockedLessons.includes(lesson.id) ?? false;
-                          const current = lesson.id === currentLessonId && !completed && unlocked;
+                          const unlocked = true;
+                          const current = lesson.id === currentLessonId && !completed;
 
                           return (
                             <LessonNode
@@ -478,7 +456,7 @@ export function CourseMapPage({
                               completed={completed}
                               unlocked={unlocked}
                               current={current}
-                              onClick={() => handleLessonClick(lesson, unlocked, completed)}
+                              onClick={() => handleLessonClick(lesson)}
                             />
                           );
                         })}

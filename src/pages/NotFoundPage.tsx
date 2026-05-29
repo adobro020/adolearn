@@ -10,7 +10,7 @@ export function NotFoundPage({ onGoHome, onCreateCourse }: NotFoundPageProps) {
       <div className="absolute -bottom-24 -left-20 h-72 w-72 rounded-full bg-sky-100/70 blur-3xl dark:bg-sky-500/10" aria-hidden="true" />
 
       <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600">404 · Page not found</p>
+        <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600">404 | Page not found</p>
         <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl dark:text-white">
           This page wandered off course.
         </h2>

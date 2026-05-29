@@ -986,7 +986,7 @@ export function LessonPlayerPage({
               <AnimatedNumber value={result.scorePercentage} suffix="%" />
             </p>
             <p className="mt-3 text-sm font-bold text-slate-600 dark:text-zinc-300">
-              {result.passed ? 'Passed' : 'Needs retry'} · Passing score is {PASSING_PERCENTAGE}%
+              {result.passed ? 'Passed' : 'Needs retry'} | Passing score is {PASSING_PERCENTAGE}%
             </p>
           </div>
 

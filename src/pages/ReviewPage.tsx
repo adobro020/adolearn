@@ -12,11 +12,7 @@ interface ReviewPageProps {
 }
 
 function getScopeLabel(courseId?: string | null): string {
-  if (!courseId) {
-    return 'all saved courses';
-  }
-
-  return getCourseById(courseId)?.title ?? 'this course';
+  return courseId ? getCourseById(courseId)?.title ?? 'this course' : 'a course';
 }
 
 export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseMap }: ReviewPageProps) {
@@ -35,15 +31,15 @@ export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseM
   if (!reviewSession) {
     return (
       <PageCard
-        eyebrow="Review Mode"
-        title="Nothing to review yet"
-        description="You do not have review items yet. Complete more lessons and missed questions will appear here."
+        eyebrow="Course Review"
+        title="No course review available"
+        description="Open a saved course and use Comprehensive Review to test every question from that course."
       >
         <div className="space-y-5">
           <EmptyState
             icon="🎯"
-            title="Review bank is empty"
-            message="You do not have review items yet. Complete more lessons and missed questions will appear here."
+            title="No course selected"
+            message="Comprehensive Review is available from each individual course page."
           >
             <button
               type="button"
@@ -53,9 +49,6 @@ export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseM
               {courseId ? 'Back to Course Map' : 'Back to Dashboard'}
             </button>
           </EmptyState>
-          <NoticeBanner tone="info" title="How review works">
-            Review Mode uses completed lessons, incorrect answers, and weak concepts from local progress. For now, there is no AI generation or backend involved.
-          </NoticeBanner>
         </div>
       </PageCard>
     );
@@ -66,9 +59,9 @@ export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseM
   return (
     <div className="space-y-6">
       <PageCard
-        eyebrow="Review Mode"
-        title="Review Session"
-        description={`A temporary review lesson built from ${scopeLabel}. It uses only saved local course data and progress.`}
+        eyebrow="Course Review"
+        title="Comprehensive Review"
+        description={`A full-course test built from ${scopeLabel}. It includes every question from every lesson in this course.`}
       >
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-3">
@@ -77,17 +70,17 @@ export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseM
               <p className="mt-2 text-3xl font-black text-slate-950"><AnimatedNumber value={reviewSession.lesson.exercises.length} /></p>
             </div>
             <div className="rounded-3xl bg-amber-50 p-4 ring-1 ring-amber-100">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-600">Available</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-600">Included</p>
               <p className="mt-2 text-3xl font-black text-slate-950"><AnimatedNumber value={reviewSession.totalAvailableItems} /></p>
             </div>
             <div className="rounded-3xl bg-sky-50 p-4 ring-1 ring-sky-100">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-600">Missed saved</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-600">Past misses</p>
               <p className="mt-2 text-3xl font-black text-slate-950"><AnimatedNumber value={reviewSummary.incorrectAnswerCount} /></p>
             </div>
           </div>
 
           <div className="rounded-[2rem] bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200">
-            <p className="text-sm font-black text-slate-950">Why these questions?</p>
+            <p className="text-sm font-black text-slate-950">What is included?</p>
             <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-slate-600">
               {reviewSession.reasonSummary.map((reason) => (
                 <li key={reason} className="flex gap-2">
@@ -103,7 +96,7 @@ export function ReviewPage({ courseId = null, onBackToDashboard, onBackToCourseM
                     key={concept.concept}
                     className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200"
                   >
-                    {concept.concept} · {concept.misses} misses
+                    {concept.concept} | {concept.misses} misses
                   </span>
                 ))}
               </div>

@@ -10,14 +10,12 @@ import {
   getUserStats,
   resetCourseProgress
 } from '../services/progressService';
-import { getReviewSummary } from '../services/reviewService';
 import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
 interface DashboardPageProps {
   onCreateCourse: () => void;
   onOpenCourse: (courseId: string) => void;
   onOpenSettings: () => void;
-  onOpenReview: (courseId?: string | null) => void;
 }
 
 interface CourseWithProgress {
@@ -98,14 +96,10 @@ function CourseCard({
   course,
   progress,
   onContinue,
-  onReview,
   onDelete,
-  reviewItemCount
 }: CourseWithProgress & {
   onContinue: () => void;
-  onReview: () => void;
   onDelete: () => void;
-  reviewItemCount: number;
 }) {
   const lessonCount = getLessonCount(course);
   const progressPercentage = getProgressPercentage(course, progress);
@@ -162,7 +156,7 @@ function CourseCard({
             </p>
           ) : (
             <p className="mt-3 text-sm font-semibold text-slate-500">
-              Not studied yet — start with the first unlocked lesson.
+              Not studied yet — choose any lesson to begin.
             </p>
           )}
         </div>
@@ -175,14 +169,6 @@ function CourseCard({
             className="flex-1 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
           >
             Continue
-          </button>
-          <button
-            type="button"
-            onClick={onReview}
-            aria-label={`Review ${course.title}`}
-            className="rounded-2xl bg-amber-50 px-5 py-3 text-sm font-black text-amber-700 ring-1 ring-amber-100 transition hover:bg-amber-100"
-          >
-            Review {reviewItemCount > 0 ? `(${reviewItemCount})` : ''}
           </button>
           <button
             type="button"
@@ -231,7 +217,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
           <div>
             <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">Welcome to AdoLearn</p>
             <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-[-0.055em] text-slate-950 sm:text-6xl dark:text-white">
-              Turn your material into a polished learning experience.
+              Create a complete course from notes, transcripts, PDFs, and study material.
             </h1>
             <p className="mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 sm:text-lg dark:text-slate-300">
               AdoLearn helps new learners convert notes, uploads, transcripts, articles, and study guides into organized sections, focused lessons, and interactive practice.
@@ -286,13 +272,13 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
         />
         <NewUserFeatureCard
           title="Practice that sticks"
-          description="AdoLearn adds recall, matching, ordering, flashcards, and review prompts to help ideas become long-term knowledge."
+          description="AdoLearn adds recall, matching, ordering, and flashcards to help ideas become long-term knowledge."
           imageSrc={ROBOT_GRAPHICS.audio}
           imageAlt="Robot reviewing study notes"
         />
         <NewUserFeatureCard
           title="Progress saved locally"
-          description="Courses, progress, review items, streaks, and XP are saved in this browser so the dashboard changes as you learn."
+          description="Courses, progress, streaks, and XP are saved in this browser so the dashboard changes as you learn."
           imageSrc={ROBOT_GRAPHICS.celebration}
           imageAlt="Robot celebrating learning progress"
         />
@@ -304,7 +290,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
             <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-300">Zero courses detected</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Create a course to unlock your dashboard.</h2>
             <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-300">
-              This homepage appears only while local storage has no saved courses. Once you generate your first course, AdoLearn automatically switches to your normal dashboard with stats, reviews, and saved paths.
+              This homepage appears only while local storage has no saved courses. Once you generate your first course, AdoLearn automatically switches to your normal dashboard with stats and saved paths.
             </p>
           </div>
           <button
@@ -323,8 +309,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
 export function DashboardPage({
   onCreateCourse,
   onOpenCourse,
-  onOpenSettings,
-  onOpenReview
+  onOpenSettings
 }: DashboardPageProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [stats, setStats] = useState<UserStats>(DEFAULT_USER_STATS);
@@ -354,8 +339,6 @@ export function DashboardPage({
   );
 
   const continueCourse = getMostRecentCourse(coursesWithProgress);
-  const reviewSummary = useMemo(() => getReviewSummary(), [courses, stats]);
-  const weakConceptPreview = reviewSummary.weakConcepts.slice(0, 3);
   const hasSavedCourses = courses.length > 0;
 
   useEffect(() => {
@@ -417,7 +400,7 @@ export function DashboardPage({
               <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-600">Dashboard</p>
               <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Ready for your next lesson?</h2>
               <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-600">
-                Continue a saved path, create something new, or review the ideas that need another pass.
+                Continue a saved path or create something new from your own material.
               </p>
             </div>
           </div>
@@ -428,13 +411,6 @@ export function DashboardPage({
               className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
             >
               Create
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenReview(null)}
-              className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/10 transition hover:-translate-y-0.5 hover:bg-amber-200"
-            >
-              Review
             </button>
             <button
               type="button"
@@ -451,42 +427,7 @@ export function DashboardPage({
         <StatTile label="Total XP" value={stats.totalXP} icon="⚡" />
         <StatTile label="Current streak" value={stats.currentStreak} suffix="days" icon="🔥" />
         <StatTile label="Saved courses" value={courses.length} icon="📚" />
-        <StatTile label="Review items" value={reviewSummary.totalItems} icon="🎯" />
       </section>
-
-      <PageCard
-        eyebrow="Review Mode"
-        title="Practice weak spots"
-        description="Review Mode pulls from missed questions, weak concepts, and older completed lessons saved in browser storage."
-      >
-        <div className="space-y-5">
-          <div className="rounded-[1.75rem] bg-gradient-to-br from-amber-50 to-orange-50 p-5 ring-1 ring-amber-100 sm:flex sm:items-center sm:justify-between sm:gap-6">
-            <div className="flex items-center gap-4">
-              <img src={ROBOT_GRAPHICS.audio} alt="Robot listening to study notes" className="hidden h-24 w-24 shrink-0 object-contain sm:block" />
-              <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-700">
-                {reviewSummary.totalItems} review items available
-              </p>
-              <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
-                Strengthen what needs another pass
-              </h3>
-              <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                {weakConceptPreview.length
-                  ? `Top weak areas: ${weakConceptPreview.map((concept) => concept.concept).join(', ')}`
-                  : 'Complete lessons and missed questions will appear here.'}
-              </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenReview(null)}
-              className="mt-4 w-full rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition hover:-translate-y-0.5 hover:bg-amber-600 sm:mt-0 sm:w-auto"
-            >
-              Start Review
-            </button>
-          </div>
-        </div>
-      </PageCard>
 
       <PageCard
         eyebrow="Continue learning"
@@ -507,8 +448,8 @@ export function DashboardPage({
               <p className="mt-2 text-sm font-semibold text-slate-600">
                 {getProgressPercentage(continueCourse.course, continueCourse.progress)}% complete
                 {formatDate(continueCourse.progress?.lastStudiedAt)
-                  ? ` · Last studied ${formatDate(continueCourse.progress?.lastStudiedAt)}`
-                  : ' · Ready to start'}
+                  ? ` | Last studied ${formatDate(continueCourse.progress?.lastStudiedAt)}`
+                  : ' | Ready to start'}
               </p>
               </div>
             </div>
@@ -566,9 +507,7 @@ export function DashboardPage({
                 course={course}
                 progress={progress}
                 onContinue={() => onOpenCourse(course.id)}
-                onReview={() => onOpenReview(course.id)}
                 onDelete={() => handleDeleteCourse(course)}
-                reviewItemCount={getReviewSummary(course.id).totalItems}
               />
             ))}
           </div>
@@ -584,13 +523,6 @@ export function DashboardPage({
               className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5"
             >
               Create a new course
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenReview(null)}
-              className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/10 transition hover:-translate-y-0.5 hover:bg-amber-200"
-            >
-              Review Mode
             </button>
             <button
               type="button"
