@@ -288,7 +288,7 @@ Before deploying or continuing development, test:
 - Refresh Lesson Player
 - Create course
 - Complete lesson
-- Confirm `browser storage` persists after refresh
+- Confirm `browser storage` persistss after refresh
 - Export data
 - Import data
 - Use mock generation
