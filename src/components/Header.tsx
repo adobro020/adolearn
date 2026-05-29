@@ -32,12 +32,17 @@ export function Header({ activePage, onLogoClick, onPageChange }: HeaderProps) {
           <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.08)] transition group-hover:border-emerald-200 group-hover:shadow-[0_14px_32px_rgba(16,185,129,0.16)] dark:border-slate-700/70 dark:bg-slate-900">
             <img src={ROBOT_GRAPHICS.head} alt="" className="h-12 w-12 object-contain" />
           </span>
-          <span className="hidden truncate text-2xl font-black tracking-[-0.04em] text-slate-950 sm:block sm:text-3xl dark:text-white">
-            AdoLearn
+          <span className="hidden min-w-0 sm:block">
+            <span className="block truncate text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl dark:text-white">
+              AdoLearn
+            </span>
+            <span className="block truncate text-[0.68rem] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
+              Interactive course builder
+            </span>
           </span>
         </button>
 
-        <nav className="flex shrink-0 items-center gap-1 bg-transparent sm:gap-2" aria-label="Primary navigation">
+        <nav className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200/80 bg-white/75 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 sm:gap-1.5" aria-label="Primary navigation">
           {NAV_ITEMS.map((item) => {
             const isActive = item.id === activeNav;
 

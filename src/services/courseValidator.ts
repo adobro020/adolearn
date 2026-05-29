@@ -1,4 +1,4 @@
-import type { Course, Exercise, MatchingPair, OrderingItem } from '../types/course';
+import type { Course, Exercise } from '../types/course';
 import {
   COURSE_REQUIRED_FIELDS,
   EXERCISE_REQUIRED_FIELDS,
@@ -116,92 +116,11 @@ function validateChoices(exercise: Record<string, unknown>, path: Path, errors: 
   });
 }
 
-function validatePairs(value: unknown, path: Path, errors: string[]): void {
-  if (!Array.isArray(value) || value.length === 0) {
-    errors.push(`${path}.pairs must contain at least one pair for a matching exercise.`);
-    return;
-  }
-
-  value.forEach((pair, pairIndex) => {
-    if (!isRecord(pair)) {
-      errors.push(`${path}.pairs[${pairIndex}] must be an object.`);
-      return;
-    }
-
-    const typedPair = pair as Partial<MatchingPair>;
-    if (!isNonEmptyString(typedPair.left)) {
-      errors.push(`${path}.pairs[${pairIndex}].left must be a non-empty string.`);
-    }
-
-    if (!isNonEmptyString(typedPair.right)) {
-      errors.push(`${path}.pairs[${pairIndex}].right must be a non-empty string.`);
-    }
-  });
-}
-
-function validateOrdering(
-  exercise: Record<string, unknown>,
-  path: Path,
-  errors: string[],
-  options: CourseValidationOptions
-): void {
-  if (!Array.isArray(exercise.items) || exercise.items.length === 0) {
-    errors.push(`${path}.items must contain at least one item for an ordering exercise.`);
-    return;
-  }
-
-  const itemIds = new Set<string>();
-  let containsRepairableStringItems = false;
-
-  exercise.items.forEach((item, itemIndex) => {
-    if (!isRecord(item)) {
-      if (options.allowNormalizerRepair && isNonEmptyString(item)) {
-        containsRepairableStringItems = true;
-        return;
-      }
-
-      errors.push(`${path}.items[${itemIndex}] must be an object.`);
-      return;
-    }
-
-    const typedItem = item as Partial<OrderingItem>;
-    if (!isNonEmptyString(typedItem.id)) {
-      if (!options.allowNormalizerRepair) {
-        errors.push(`${path}.items[${itemIndex}].id must be a non-empty string.`);
-      }
-    } else {
-      itemIds.add(typedItem.id);
-    }
-
-    if (!isNonEmptyString(typedItem.text)) {
-      errors.push(`${path}.items[${itemIndex}].text must be a non-empty string.`);
-    }
-  });
-
-  if (!Array.isArray(exercise.correctOrder) || exercise.correctOrder.length === 0) {
-    if (!options.allowNormalizerRepair) {
-      errors.push(`${path}.correctOrder must exist for an ordering exercise.`);
-    }
-    return;
-  }
-
-  exercise.correctOrder.forEach((itemId, orderIndex) => {
-    if (!isNonEmptyString(itemId)) {
-      errors.push(`${path}.correctOrder[${orderIndex}] must be a non-empty string item ID.`);
-      return;
-    }
-
-    if (!containsRepairableStringItems && itemIds.size > 0 && !itemIds.has(itemId)) {
-      errors.push(`${path}.correctOrder[${orderIndex}] must reference an item ID from ${path}.items.`);
-    }
-  });
-}
-
 function validateExercise(
   candidate: unknown,
   path: Path,
   errors: string[],
-  warnings: string[],
+  _warnings: string[],
   options: CourseValidationOptions
 ): void {
   if (!isRecord(candidate)) {
@@ -232,12 +151,8 @@ function validateExercise(
     validateChoices(candidate, path, errors);
   }
 
-  if (candidate.type === 'matching') {
-    validatePairs(candidate.pairs, path, errors);
-  }
-
-  if (candidate.type === 'ordering') {
-    validateOrdering(candidate, path, errors, options);
+  if (candidate.type === 'true_false' && typeof candidate.answer !== 'boolean') {
+    errors.push(`${path}.answer must be a boolean for a true_false exercise.`);
   }
 }
 
@@ -263,7 +178,7 @@ function validateLesson(
   validateStringField(candidate, 'summary', path, errors, options);
   validateStringArray(candidate.learningObjectives, `${path}.learningObjectives`, errors, options, true);
 
-  if (!isNonEmptyString(candidate.type) || !VALID_LESSON_TYPES.includes(candidate.type as Course['sections'][number]['units'][number]['lessons'][number]['type'])) {
+  if (!isNonEmptyString(candidate.type) || !VALID_LESSON_TYPES.includes(candidate.type as Course['units'][number]['sections'][number]['lessons'][number]['type'])) {
     errors.push(`${path}.type must be one of: ${VALID_LESSON_TYPES.join(', ')}.`);
   }
 
@@ -278,37 +193,6 @@ function validateLesson(
 
   candidate.exercises.forEach((exercise, exerciseIndex) => {
     validateExercise(exercise, `${path}.exercises[${exerciseIndex}]`, errors, warnings, options);
-  });
-}
-
-function validateUnit(
-  candidate: unknown,
-  path: Path,
-  errors: string[],
-  warnings: string[],
-  options: CourseValidationOptions
-): void {
-  if (!isRecord(candidate)) {
-    errors.push(`${path} must be a unit object.`);
-    return;
-  }
-
-  const repairableUnitFields = new Set(['id']);
-  UNIT_REQUIRED_FIELDS.forEach((field) =>
-    hasRequiredField(candidate, field, path, errors, options, repairableUnitFields)
-  );
-
-  validateStringField(candidate, 'id', path, errors, options, true);
-  validateStringField(candidate, 'title', path, errors, options);
-  validateStringField(candidate, 'description', path, errors, options);
-
-  if (!Array.isArray(candidate.lessons) || candidate.lessons.length === 0) {
-    errors.push(`${path}.lessons must contain at least one lesson.`);
-    return;
-  }
-
-  candidate.lessons.forEach((lesson, lessonIndex) => {
-    validateLesson(lesson, `${path}.lessons[${lessonIndex}]`, errors, warnings, options);
   });
 }
 
@@ -333,13 +217,44 @@ function validateSection(
   validateStringField(candidate, 'title', path, errors, options);
   validateStringField(candidate, 'description', path, errors, options);
 
-  if (!Array.isArray(candidate.units) || candidate.units.length === 0) {
-    errors.push(`${path}.units must contain at least one unit.`);
+  if (!Array.isArray(candidate.lessons) || candidate.lessons.length === 0) {
+    errors.push(`${path}.lessons must contain at least one lesson.`);
     return;
   }
 
-  candidate.units.forEach((unit, unitIndex) => {
-    validateUnit(unit, `${path}.units[${unitIndex}]`, errors, warnings, options);
+  candidate.lessons.forEach((lesson, lessonIndex) => {
+    validateLesson(lesson, `${path}.lessons[${lessonIndex}]`, errors, warnings, options);
+  });
+}
+
+function validateUnit(
+  candidate: unknown,
+  path: Path,
+  errors: string[],
+  warnings: string[],
+  options: CourseValidationOptions
+): void {
+  if (!isRecord(candidate)) {
+    errors.push(`${path} must be a unit object.`);
+    return;
+  }
+
+  const repairableUnitFields = new Set(['id']);
+  UNIT_REQUIRED_FIELDS.forEach((field) =>
+    hasRequiredField(candidate, field, path, errors, options, repairableUnitFields)
+  );
+
+  validateStringField(candidate, 'id', path, errors, options, true);
+  validateStringField(candidate, 'title', path, errors, options);
+  validateStringField(candidate, 'description', path, errors, options);
+
+  if (!Array.isArray(candidate.sections) || candidate.sections.length === 0) {
+    errors.push(`${path}.sections must contain at least one section.`);
+    return;
+  }
+
+  candidate.sections.forEach((section, sectionIndex) => {
+    validateSection(section, `${path}.sections[${sectionIndex}]`, errors, warnings, options);
   });
 }
 
@@ -355,7 +270,7 @@ export function validateCourse(candidate: unknown, options: CourseValidationOpti
     };
   }
 
-  const repairableTopLevelFields = new Set(['id', 'createdAt', 'updatedAt', 'estimatedTotalMinutes']);
+  const repairableTopLevelFields = new Set(['id', 'createdAt', 'updatedAt', 'estimatedTotalMinutes', 'sourceMaterialPreview']);
   COURSE_REQUIRED_FIELDS.forEach((field) =>
     hasRequiredField(candidate, field, 'course', errors, options, repairableTopLevelFields)
   );
@@ -366,16 +281,15 @@ export function validateCourse(candidate: unknown, options: CourseValidationOpti
   validateStringField(candidate, 'sourceMaterialPreview', 'course', errors, options, true);
   validateStringArray(candidate.keyConcepts, 'course.keyConcepts', errors, options, true);
 
-
   if ('estimatedTotalMinutes' in candidate && !isNumber(candidate.estimatedTotalMinutes)) {
     errors.push('course.estimatedTotalMinutes must be a number.');
   }
 
-  if (!Array.isArray(candidate.sections) || candidate.sections.length === 0) {
-    errors.push('course.sections must contain at least one section.');
+  if (!Array.isArray(candidate.units) || candidate.units.length === 0) {
+    errors.push('course.units must contain at least one unit.');
   } else {
-    candidate.sections.forEach((section, sectionIndex) => {
-      validateSection(section, `course.sections[${sectionIndex}]`, errors, warnings, options);
+    candidate.units.forEach((unit, unitIndex) => {
+      validateUnit(unit, `course.units[${unitIndex}]`, errors, warnings, options);
     });
   }
 

@@ -1,15 +1,10 @@
 import type { ExerciseType, LessonType } from '../types/course';
 
-export const COURSE_SCHEMA_VERSION = 'adolearn-course-v1';
+export const COURSE_SCHEMA_VERSION = 'adolearn-course-v2';
 
 export const VALID_LESSON_TYPES: LessonType[] = ['standard', 'review', 'final_challenge'];
 
-export const VALID_EXERCISE_TYPES: ExerciseType[] = [
-  'multiple_choice',
-  'true_false',
-  'matching',
-  'ordering'
-];
+export const VALID_EXERCISE_TYPES: ExerciseType[] = ['multiple_choice', 'true_false'];
 
 export const COURSE_REQUIRED_FIELDS = [
   'id',
@@ -19,12 +14,12 @@ export const COURSE_REQUIRED_FIELDS = [
   'createdAt',
   'updatedAt',
   'estimatedTotalMinutes',
-  'sections',
+  'units',
   'keyConcepts'
 ] as const;
 
-export const SECTION_REQUIRED_FIELDS = ['id', 'title', 'description', 'units'] as const;
-export const UNIT_REQUIRED_FIELDS = ['id', 'title', 'description', 'lessons'] as const;
+export const UNIT_REQUIRED_FIELDS = ['id', 'title', 'description', 'sections'] as const;
+export const SECTION_REQUIRED_FIELDS = ['id', 'title', 'description', 'lessons'] as const;
 export const LESSON_REQUIRED_FIELDS = [
   'id',
   'title',
@@ -37,60 +32,52 @@ export const LESSON_REQUIRED_FIELDS = [
 export const EXERCISE_REQUIRED_FIELDS = ['id', 'type', 'prompt', 'explanation'] as const;
 
 export const ADOLEARN_COURSE_SCHEMA = {
-  schemaVersion: COURSE_SCHEMA_VERSION,
-  description:
-    'AdoLearn browser-local course JSON. The object must be serializable and compatible with the Course TypeScript type.',
-  course: {
-    id: 'string; stable unique ID, or omit only when a normalizer will add it',
-    title: 'string',
-    description: 'string',
-    sourceMaterialPreview: 'string; short excerpt or summary of the provided source material only',
-    createdAt: 'ISO date string, or omit only when a normalizer will add it',
-    updatedAt: 'ISO date string, or omit only when a normalizer will add it',
-    estimatedTotalMinutes: 'number; sum of lesson estimates, or omit only when a normalizer will add it',
-    keyConcepts: 'string[]; source-grounded concepts only',
-    sections: [
-      {
-        id: 'string',
-        title: 'string',
-        description: 'string',
-        units: [
-          {
-            id: 'string',
-            title: 'string',
-            description: 'string',
-            lessons: [
-              {
-                id: 'string',
-                title: 'string',
-                type: VALID_LESSON_TYPES,
-                estimatedMinutes: 'number',
-                learningObjectives: 'string[]',
-                summary: 'string',
-                exercises: [
-                  {
-                    id: 'string',
-                    type: VALID_EXERCISE_TYPES,
-                    prompt: 'string',
-                    choices: 'optional array of { id: string, text: string }; required for multiple_choice',
-                    answer: 'optional string | boolean | string[]',
-                    acceptedAnswers: 'optional string[] for answer metadata; no typed-answer exercises are generated',
-                    explanation: 'string; required for every exercise',
-                    hint: 'string; can be empty',
-                    sourceReference: 'optional source citation object with excerpt/location',
-                    pairs: 'optional array of { id: string, left: string, right: string }; required for matching',
-                    items: 'optional array of { id: string, text: string }; required for ordering',
-                    correctOrder: 'optional string[] of ordering item IDs; required for ordering',
-                    concept: 'optional string used for weak-concept tracking'
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+  id: 'string; stable unique ID, or omit only when a normalizer will add it',
+  title: 'string',
+  description: 'string',
+  sourceMaterialPreview: 'string; short excerpt or summary of the provided source material only',
+  createdAt: 'ISO date string, or omit only when a normalizer will add it',
+  updatedAt: 'ISO date string, or omit only when a normalizer will add it',
+  estimatedTotalMinutes: 'number; sum of lesson estimates, or omit only when a normalizer will add it',
+  keyConcepts: 'string[]; source-grounded concepts only',
+  units: [
+    {
+      id: 'string',
+      title: 'string',
+      description: 'string',
+      sections: [
+        {
+          id: 'string',
+          title: 'string',
+          description: 'string',
+          lessons: [
+            {
+              id: 'string',
+              title: 'string',
+              type: VALID_LESSON_TYPES,
+              estimatedMinutes: 'number',
+              learningObjectives: 'string[]',
+              summary: 'string',
+              exercises: [
+                {
+                  id: 'string',
+                  type: VALID_EXERCISE_TYPES,
+                  prompt: 'string',
+                  choices: 'optional array of { id: string, text: string }; required for multiple_choice',
+                  answer: 'string | boolean; required for scoring',
+                  acceptedAnswers: 'optional string[] for answer metadata',
+                  explanation: 'string; required for every exercise',
+                  hint: 'string; can be empty',
+                  sourceReference: 'optional source citation object with excerpt/location',
+                  concept: 'optional string used for weak-concept tracking'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 } as const;
 
 export function getCourseSchemaForPrompt(): string {
@@ -102,19 +89,18 @@ export function getCourseJSONContractSummary(): string {
     `Schema version: ${COURSE_SCHEMA_VERSION}`,
     `Valid lesson types: ${VALID_LESSON_TYPES.join(', ')}`,
     `Valid exercise types: ${VALID_EXERCISE_TYPES.join(', ')}`,
-    'Every course must contain sections, every section must contain units, every unit must contain lessons, and every lesson must contain exercises.',
-    'Every exercise must include a prompt and an explanation.',
-    'multiple_choice exercises require choices.',
-    'matching exercises require pairs.',
-    'ordering exercises require items and correctOrder.'
+    'Every course must contain units, every unit must contain sections, every section must contain lessons, and every lesson must contain exercises.',
+    'Every lesson must include learning objectives.',
+    'Every exercise must include a prompt, an explanation, and a hint when possible.',
+    'multiple_choice exercises require choices and a correct answer represented by answer or acceptedAnswers.',
+    'true_false exercises require a boolean answer.'
   ].join('\n');
 }
-
 
 export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: true,
-  required: ['title', 'description', 'sections', 'keyConcepts'],
+  required: ['title', 'description', 'units', 'keyConcepts'],
   properties: {
     id: { type: 'string' },
     title: { type: 'string' },
@@ -127,18 +113,18 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
       type: 'array',
       items: { type: 'string' }
     },
-    sections: {
+    units: {
       type: 'array',
       minItems: 1,
       items: {
         type: 'object',
         additionalProperties: true,
-        required: ['title', 'description', 'units'],
+        required: ['title', 'description', 'sections'],
         properties: {
           id: { type: 'string' },
           title: { type: 'string' },
           description: { type: 'string' },
-          units: {
+          sections: {
             type: 'array',
             minItems: 1,
             items: {
@@ -192,8 +178,7 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
                             answer: {
                               anyOf: [
                                 { type: 'string' },
-                                { type: 'boolean' },
-                                { type: 'array', items: { type: 'string' } }
+                                { type: 'boolean' }
                               ]
                             },
                             acceptedAnswers: {
@@ -211,35 +196,6 @@ export const ADOLEARN_COURSE_RESPONSE_JSON_SCHEMA = {
                                 excerpt: { type: 'string' },
                                 location: { type: 'string' }
                               }
-                            },
-                            pairs: {
-                              type: 'array',
-                              items: {
-                                type: 'object',
-                                additionalProperties: true,
-                                required: ['left', 'right'],
-                                properties: {
-                                  id: { type: 'string' },
-                                  left: { type: 'string' },
-                                  right: { type: 'string' }
-                                }
-                              }
-                            },
-                            items: {
-                              type: 'array',
-                              items: {
-                                type: 'object',
-                                additionalProperties: true,
-                                required: ['id', 'text'],
-                                properties: {
-                                  id: { type: 'string' },
-                                  text: { type: 'string' }
-                                }
-                              }
-                            },
-                            correctOrder: {
-                              type: 'array',
-                              items: { type: 'string' }
                             },
                             concept: { type: 'string' }
                           }

@@ -36,8 +36,6 @@ interface IdRewriteMap {
   lessons: Map<string, string>;
   exercises: Map<string, string>;
   choices: Map<string, string>;
-  pairs: Map<string, string>;
-  items: Map<string, string>;
 }
 
 function createId(prefix: string): string {
@@ -96,8 +94,6 @@ function rewriteCourseIds(course: Course, forcedCourseId?: string): Course {
     lessons: new Map(),
     exercises: new Map(),
     choices: new Map(),
-    pairs: new Map(),
-    items: new Map()
   };
   const nextCourseId = forcedCourseId ?? getStringId(course.id, 'course', rewrites.courses);
 
@@ -106,13 +102,13 @@ function rewriteCourseIds(course: Course, forcedCourseId?: string): Course {
     id: nextCourseId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    sections: course.sections.map((section) => ({
-      ...section,
-      id: getStringId(section.id, 'section', rewrites.sections),
-      units: section.units.map((unit) => ({
-        ...unit,
-        id: getStringId(unit.id, 'unit', rewrites.units),
-        lessons: unit.lessons.map((lesson) => ({
+    units: course.units.map((unit) => ({
+      ...unit,
+      id: getStringId(unit.id, 'unit', rewrites.units),
+      sections: unit.sections.map((section) => ({
+        ...section,
+        id: getStringId(section.id, 'section', rewrites.sections),
+        lessons: section.lessons.map((lesson) => ({
           ...lesson,
           id: getStringId(lesson.id, 'lesson', rewrites.lessons),
           exercises: lesson.exercises.map((exercise) => ({
@@ -121,14 +117,6 @@ function rewriteCourseIds(course: Course, forcedCourseId?: string): Course {
             choices: exercise.choices?.map((choice) => ({
               ...choice,
               id: getStringId(choice.id, 'choice', rewrites.choices)
-            })),
-            pairs: exercise.pairs?.map((pair) => ({
-              ...pair,
-              id: getStringId(pair.id, 'pair', rewrites.pairs)
-            })),
-            items: exercise.items?.map((item) => ({
-              ...item,
-              id: getStringId(item.id, 'item', rewrites.items)
             }))
           }))
         }))
@@ -200,7 +188,7 @@ function normalizeProgressImport(value: unknown, courseIds: Set<string>): Progre
     return null;
   }
 
-  const rawCourses = value.courses ?? value.courseProgress;
+  const rawCourses = value.courses;
 
   if (!isRecord(rawCourses)) {
     return null;
@@ -230,7 +218,7 @@ function normalizeProgressImport(value: unknown, courseIds: Set<string>): Progre
   }
 
   return {
-    userStats: normalizeUserStats(value.userStats ?? value.stats),
+    userStats: normalizeUserStats(value.userStats),
     courses
   };
 }

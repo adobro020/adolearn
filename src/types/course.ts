@@ -2,14 +2,7 @@ export type ISODateString = string;
 
 export type LessonType = 'standard' | 'review' | 'final_challenge';
 
-export type ExerciseType =
-  | 'multiple_choice'
-  | 'true_false'
-  | 'fill_blank'
-  | 'matching'
-  | 'ordering'
-  | 'scenario'
-  | 'explain_concept';
+export type ExerciseType = 'multiple_choice' | 'true_false';
 
 export interface Course {
   id: string;
@@ -19,18 +12,18 @@ export interface Course {
   createdAt: ISODateString;
   updatedAt: ISODateString;
   estimatedTotalMinutes: number;
-  sections: Section[];
+  units: Unit[];
   keyConcepts: string[];
 }
 
-export interface Section {
+export interface Unit {
   id: string;
   title: string;
   description: string;
-  units: Unit[];
+  sections: Section[];
 }
 
-export interface Unit {
+export interface Section {
   id: string;
   title: string;
   description: string;
@@ -52,17 +45,6 @@ export interface ExerciseChoice {
   text: string;
 }
 
-export interface MatchingPair {
-  id: string;
-  left: string;
-  right: string;
-}
-
-export interface OrderingItem {
-  id: string;
-  text: string;
-}
-
 export interface SourceReference {
   sourceId?: string;
   title?: string;
@@ -70,7 +52,7 @@ export interface SourceReference {
   location?: string;
 }
 
-export type ExerciseAnswer = string | boolean | string[];
+export type ExerciseAnswer = string | boolean;
 
 export interface Exercise {
   id: string;
@@ -82,8 +64,5 @@ export interface Exercise {
   explanation?: string;
   hint?: string;
   sourceReference?: SourceReference;
-  pairs?: MatchingPair[];
-  items?: OrderingItem[];
-  correctOrder?: string[];
   concept?: string;
 }

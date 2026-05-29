@@ -5,10 +5,10 @@ import type {
 } from '../types/settings';
 import { removeItem, safeGetJSON, safeSetJSON } from './storageService';
 
-const MODEL_VALUES = ['gpt-5.4-nano', 'gpt-5-nano', 'gpt-5-mini', 'gpt-5'] as const;
+const MODEL_VALUES = ['gpt-5.4-mini', 'gpt-5-mini', 'gpt-5'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  modelName: 'gpt-5.4-nano',
+  modelName: 'gpt-5.4-mini',
   theme: 'system',
   dailyGoalMinutes: 10,
   soundEffectsEnabled: true,
@@ -57,7 +57,6 @@ export function getSettings(): AppSettings {
   const storedSettings = safeGetJSON<unknown>(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
   const normalizedSettings = normalizeSettings(storedSettings);
 
-  // Rewrite older settings without legacy secret fields, retired generation modes, or removed course preferences.
   if (
     isRecord(storedSettings) &&
     (
@@ -65,7 +64,8 @@ export function getSettings(): AppSettings {
       'generationMode' in storedSettings ||
       'preferredDifficulty' in storedSettings ||
       'preferredCourseStyle' in storedSettings ||
-      'preferredLessonLength' in storedSettings
+      'preferredLessonLength' in storedSettings ||
+      storedSettings.modelName !== normalizedSettings.modelName
     )
   ) {
     safeSetJSON(STORAGE_KEYS.settings, normalizedSettings);

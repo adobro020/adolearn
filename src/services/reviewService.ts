@@ -49,7 +49,7 @@ function normalizeForId(value: string): string {
 }
 
 function getAllLessons(course: Course): Lesson[] {
-  return course.sections.flatMap((section) => section.units.flatMap((unit) => unit.lessons));
+  return course.units.flatMap((unit) => unit.sections.flatMap((section) => section.lessons));
 }
 
 function cloneExerciseForReview(item: ReviewSourceItem): Exercise {
@@ -58,9 +58,6 @@ function cloneExerciseForReview(item: ReviewSourceItem): Exercise {
     id: item.id,
     choices: item.exercise.choices ? [...item.exercise.choices] : undefined,
     acceptedAnswers: item.exercise.acceptedAnswers ? [...item.exercise.acceptedAnswers] : undefined,
-    pairs: item.exercise.pairs ? [...item.exercise.pairs] : undefined,
-    items: item.exercise.items ? [...item.exercise.items] : undefined,
-    correctOrder: item.exercise.correctOrder ? [...item.exercise.correctOrder] : undefined,
     sourceReference: {
       ...item.exercise.sourceReference,
       sourceId: item.courseId,

@@ -23,8 +23,8 @@ interface NumberedLesson {
 }
 
 function getAllLessons(course: Course): Lesson[] {
-  return course.sections.flatMap((section) =>
-    section.units.flatMap((unit) => unit.lessons)
+  return course.units.flatMap((unit) =>
+    unit.sections.flatMap((section) => section.lessons)
   );
 }
 
@@ -56,12 +56,12 @@ function calculateLessonGroupProgress(lessons: Lesson[], progress: CourseProgres
   return Math.round((completedCount / lessons.length) * 100);
 }
 
-function getUnitLessons(unit: Course['sections'][number]['units'][number]): Lesson[] {
-  return unit.lessons;
+function getUnitLessons(unit: Course['units'][number]): Lesson[] {
+  return unit.sections.flatMap((section) => section.lessons);
 }
 
-function getSectionLessons(section: Course['sections'][number]): Lesson[] {
-  return section.units.flatMap((unit) => unit.lessons);
+function getSectionLessons(section: Course['units'][number]['sections'][number]): Lesson[] {
+  return section.lessons;
 }
 
 function calculateCourseXP(progress: CourseProgress | null): number {
@@ -106,10 +106,6 @@ function getLessonBadge(lesson: Lesson, lessonNumber: number, completed: boolean
     return '✓';
   }
 
-
-  if (lesson.type === 'review') {
-    return '↻';
-  }
 
   if (lesson.type === 'final_challenge') {
     return '★';
@@ -379,66 +375,66 @@ export function CourseMapPage({
       </PageCard>
 
       <section className="space-y-6" aria-label="Learning path">
-        {course.sections.map((section, sectionIndex) => {
-          const sectionLessons = getSectionLessons(section);
-          const sectionProgress = calculateLessonGroupProgress(sectionLessons, progress);
+        {course.units.map((unit, unitIndex) => {
+          const unitLessons = getUnitLessons(unit);
+          const unitProgress = calculateLessonGroupProgress(unitLessons, progress);
 
           return (
           <article
-            key={section.id}
+            key={unit.id}
             className="rounded-[2rem] bg-white p-5 shadow-sm shadow-slate-200 ring-1 ring-slate-200 transition duration-200 hover:shadow-lg hover:shadow-slate-200/70 sm:p-6"
           >
             <div className="mb-5 rounded-3xl bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
-                    Section {sectionIndex + 1}
+                    Unit {unitIndex + 1}
                   </p>
                   <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                    {section.title}
+                    {unit.title}
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{section.description}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{unit.description}</p>
                 </div>
                 <ProgressRing
-                  value={sectionProgress}
-                  label="Section progress"
-                  caption={`${sectionLessons.filter((lesson) => progress?.completedLessons.includes(lesson.id)).length}/${sectionLessons.length} done`}
+                  value={unitProgress}
+                  label="Unit progress"
+                  caption={`${unitLessons.filter((lesson) => progress?.completedLessons.includes(lesson.id)).length}/${unitLessons.length} done`}
                   size={78}
                 />
               </div>
             </div>
 
             <div className="space-y-5">
-              {section.units.map((unit, unitIndex) => {
-                const numberedLessons: NumberedLesson[] = unit.lessons.map((lesson) => {
+              {unit.sections.map((section, sectionIndex) => {
+                const numberedLessons: NumberedLesson[] = section.lessons.map((lesson) => {
                   lessonCounter += 1;
                   return {
                     lesson,
                     globalLessonNumber: lessonCounter
                   };
                 });
-                const unitLessons = getUnitLessons(unit);
-                const unitProgress = calculateLessonGroupProgress(unitLessons, progress);
+                const sectionLessons = getSectionLessons(section);
+                const sectionProgress = calculateLessonGroupProgress(sectionLessons, progress);
 
                 return (
                   <div
-                    key={unit.id}
+                    key={section.id}
                     className="overflow-hidden rounded-[1.75rem] bg-slate-50 p-4 ring-1 ring-slate-200 sm:p-5"
                   >
                     <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
                       <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Unit {unitIndex + 1}
+                        Section {sectionIndex + 1}
                       </p>
                       <h3 className="mt-1 text-xl font-black tracking-tight text-slate-950">
-                        {unit.title}
+                        {section.title}
                       </h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{unit.description}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{section.description}</p>
                       <div className="mt-4">
                         <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                          <span>Unit progress</span>
-                          <span>{unitProgress}%</span>
+                          <span>Section progress</span>
+                          <span>{sectionProgress}%</span>
                         </div>
-                        <ProgressBar value={unitProgress} label={`${unit.title} progress`} tone="sky" />
+                        <ProgressBar value={sectionProgress} label={`${section.title} progress`} tone="sky" />
                       </div>
                     </div>
 

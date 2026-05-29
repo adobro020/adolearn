@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { CourseMapPage } from './pages/CourseMapPage';
 import { CreateCoursePage } from './pages/CreateCoursePage';
@@ -7,18 +8,24 @@ import { LessonPlayerPage } from './pages/LessonPlayerPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { StudyTechniquePage } from './pages/StudyTechniquePage';
 import { getCourses } from './services/courseService';
 import { getSettings } from './services/settingsService';
 import type { AppSettings, ThemePreference } from './types/settings';
 import type { PageId } from './types/navigation';
 
-type AppRoutePage = PageId | 'notFound';
+type AppRoutePage = PageId | 'studyTechnique' | 'notFound';
 
 interface ParsedRoute {
   page: AppRoutePage;
   courseId: string | null;
   lessonId: string | null;
   reviewCourseId: string | null;
+  studyTechniqueId: string | null;
+}
+
+function emptyRoute(page: AppRoutePage): ParsedRoute {
+  return { page, courseId: null, lessonId: null, reviewCourseId: null, studyTechniqueId: null };
 }
 
 function shouldUseDarkTheme(theme: ThemePreference): boolean {
@@ -38,7 +45,7 @@ function cleanPathname(pathname: string): string {
     return '/';
   }
 
-  return pathname.replace(/\/+$|^\s+|\s+$/g, '') || '/';
+  return pathname.replace(/\/+$/g, '').trim() || '/';
 }
 
 function safeDecode(value: string | undefined): string | null {
@@ -58,35 +65,38 @@ function parseRoute(pathname: string): ParsedRoute {
   const parts = path.split('/').filter(Boolean);
 
   if (parts.length === 0) {
-    return { page: 'dashboard', courseId: null, lessonId: null, reviewCourseId: null };
+    return emptyRoute('dashboard');
   }
 
   if (parts.length === 1 && parts[0] === 'create') {
-    return { page: 'create', courseId: null, lessonId: null, reviewCourseId: null };
+    return emptyRoute('create');
   }
 
   if (parts.length === 1 && parts[0] === 'settings') {
-    return { page: 'settings', courseId: null, lessonId: null, reviewCourseId: null };
+    return emptyRoute('settings');
+  }
+
+  if (parts[0] === 'study' && parts.length === 2) {
+    return { ...emptyRoute('studyTechnique'), studyTechniqueId: safeDecode(parts[1]) };
   }
 
   if (parts[0] === 'review' && parts.length <= 2) {
-    return { page: 'review', courseId: null, lessonId: null, reviewCourseId: safeDecode(parts[1]) };
+    return { ...emptyRoute('review'), reviewCourseId: safeDecode(parts[1]) };
   }
 
   if (parts[0] === 'course' && parts.length === 2) {
-    return { page: 'courseMap', courseId: safeDecode(parts[1]), lessonId: null, reviewCourseId: null };
+    return { ...emptyRoute('courseMap'), courseId: safeDecode(parts[1]) };
   }
 
   if (parts[0] === 'course' && parts.length === 4 && parts[2] === 'lesson') {
     return {
-      page: 'lessonPlayer',
+      ...emptyRoute('lessonPlayer'),
       courseId: safeDecode(parts[1]),
-      lessonId: safeDecode(parts[3]),
-      reviewCourseId: null
+      lessonId: safeDecode(parts[3])
     };
   }
 
-  return { page: 'notFound', courseId: null, lessonId: null, reviewCourseId: null };
+  return emptyRoute('notFound');
 }
 
 function coursePath(courseId: string): string {
@@ -119,6 +129,7 @@ export default function App() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(initialRoute.courseId);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(initialRoute.lessonId);
   const [selectedReviewCourseId, setSelectedReviewCourseId] = useState<string | null>(initialRoute.reviewCourseId);
+  const [selectedStudyTechniqueId, setSelectedStudyTechniqueId] = useState<string | null>(initialRoute.studyTechniqueId);
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => getSettings().theme);
 
   function applyRoute(route: ParsedRoute) {
@@ -126,6 +137,7 @@ export default function App() {
     setSelectedCourseId(route.courseId);
     setSelectedLessonId(route.lessonId);
     setSelectedReviewCourseId(route.reviewCourseId);
+    setSelectedStudyTechniqueId(route.studyTechniqueId);
   }
 
   function navigate(path: string) {
@@ -181,6 +193,7 @@ export default function App() {
       courseMap: 'Course Map',
       lessonPlayer: 'Lesson',
       review: 'Review',
+      studyTechnique: 'Study Techniques',
       notFound: 'Page Not Found'
     };
 
@@ -232,6 +245,14 @@ export default function App() {
         return <CreateCoursePage onCourseCreated={openCourseMap} />;
       case 'settings':
         return <SettingsPage />;
+      case 'studyTechnique':
+        return (
+          <StudyTechniquePage
+            techniqueId={selectedStudyTechniqueId}
+            onCreateCourse={openCreateCourse}
+            onBackToDashboard={openDashboard}
+          />
+        );
       case 'courseMap':
         return (
           <CourseMapPage
@@ -293,6 +314,8 @@ export default function App() {
           {renderPage()}
         </main>
       </div>
+
+      <Footer onNavigate={navigate} onCreateCourse={openCreateCourse} />
     </div>
   );
 }

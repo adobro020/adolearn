@@ -14,11 +14,11 @@ export const MOCK_AI_COURSE_JSON = {
   description: 'A short course generated from a tiny mock source excerpt.',
   sourceMaterialPreview: 'Photosynthesis converts light energy into chemical energy stored in glucose.',
   keyConcepts: ['Photosynthesis', 'Chlorophyll', 'Glucose'],
-  sections: [
+  units: [
     {
       title: 'Understand the Process',
       description: 'Learn the main ideas in a short path.',
-      units: [
+      sections: [
         {
           title: 'Photosynthesis Basics',
           description: 'Practice core vocabulary and relationships.',
@@ -91,8 +91,8 @@ export function runCourseSchemaDebugCheck(mockAIJSON: unknown = MOCK_AI_COURSE_J
           'Mock AI JSON validated successfully.',
           'Course normalization completed successfully.',
           `Normalized course ID: ${normalizedCourse.id}`,
-          `Sections: ${normalizedCourse.sections.length}`,
-          `First unlockable lesson ID: ${normalizedCourse.sections[0]?.units[0]?.lessons[0]?.id ?? 'none'}`
+          `Units: ${normalizedCourse.units.length}`,
+          `First unlockable lesson ID: ${normalizedCourse.units[0]?.sections[0]?.lessons[0]?.id ?? 'none'}`
         ]
       : [
           'Mock AI JSON passed repairable validation, but the normalized course is invalid.',

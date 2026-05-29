@@ -130,119 +130,22 @@ function createExerciseSet(
     lessonType === 'review'
       ? 'This review question checks whether the concept still feels familiar after several lessons.'
       : lessonType === 'final_challenge'
-        ? 'This final challenge question asks you to combine recall with explanation.'
+        ? 'This final challenge question asks you to combine recall with careful selection.'
         : 'This question builds confidence with the lesson focus before moving on.';
 
   const multipleChoiceAnswer = `Identify how ${concept.toLowerCase()} supports the main idea.`;
-  const multipleChoiceDistractors = [
-    'Ignore the source and rely only on prior knowledge.',
-    'Memorize every sentence without grouping ideas.',
-    'Treat all details as equally important.'
-  ];
+  const secondChoiceAnswer = `Connect ${concept.toLowerCase()} to one clear source detail.`;
 
-
-  const conceptCheckExercise: Exercise = {
-    id: createId('exercise'),
-    type: 'explain_concept',
-    prompt: `In one sentence, explain how ${concept.toLowerCase()} could help someone understand the pasted source material.`,
-    answer: `${concept} helps organize the source material into a clearer learning path.`,
-    acceptedAnswers: [
-      `${concept.toLowerCase()} helps organize the source material`,
-      `${concept.toLowerCase()} makes the material easier to understand`,
-      `${concept.toLowerCase()} connects details to the main idea`
-    ],
-    explanation: `A strong answer explains the role of ${concept.toLowerCase()} in making the material clearer, easier to remember, or easier to apply.`,
-    hint: 'Focus on how the concept improves understanding.',
-    sourceReference,
-    concept
-  };
-
-  const matchingExercise: Exercise = {
-    id: createId('exercise'),
-    type: 'matching',
-    prompt: `Match each ${concept.toLowerCase()} study term with the best definition.`,
-    pairs: [
-      {
-        id: createId('pair'),
-        left: 'Main idea',
-        right: 'The central point that organizes the lesson.'
-      },
-      {
-        id: createId('pair'),
-        left: 'Example',
-        right: 'A concrete detail that makes an idea easier to remember.'
-      },
-      {
-        id: createId('pair'),
-        left: concept,
-        right: 'The focus concept to explain, practice, and revisit.'
-      }
-    ],
-    explanation: `Matching checks whether you can connect labels to meanings. These connections make ${concept.toLowerCase()} easier to use later.`,
-    hint: 'Start with the definition that clearly mentions the focus concept.',
-    sourceReference,
-    concept
-  };
-
-  const firstOrderItemId = createId('order');
-  const secondOrderItemId = createId('order');
-  const thirdOrderItemId = createId('order');
-  const orderingExercise: Exercise = {
-    id: createId('exercise'),
-    type: 'ordering',
-    prompt: `Put these study steps for ${concept.toLowerCase()} in the best order.`,
-    items: [
-      { id: firstOrderItemId, text: 'Identify the main idea in the source material.' },
-      { id: secondOrderItemId, text: `Connect ${concept.toLowerCase()} to one clear example.` },
-      { id: thirdOrderItemId, text: 'Explain the idea in your own words.' }
-    ],
-    correctOrder: [firstOrderItemId, secondOrderItemId, thirdOrderItemId],
-    explanation: `A strong study sequence starts with the main idea, anchors it to an example, and then checks understanding through explanation.`,
-    hint: 'Think: identify, connect, explain.',
-    sourceReference,
-    concept
-  };
-
-  const scenarioAnswer = `Use ${concept.toLowerCase()} to connect the details back to the main idea.`;
-  const scenarioExercise: Exercise = {
-    id: createId('exercise'),
-    type: 'scenario',
-    prompt: `Scenario: A classmate remembers isolated facts from “${lessonTitle}” but cannot explain why they matter. What should they do next?`,
-    choices: createChoices(scenarioAnswer, [
-      'Reread randomly until the facts feel familiar.',
-      'Skip the confusing details and move to a new topic.',
-      'Memorize the longest sentence from the notes.'
-    ]),
-    answer: scenarioAnswer,
-    acceptedAnswers: [scenarioAnswer],
-    explanation: `The best response uses ${concept.toLowerCase()} to turn separate facts into a useful mental structure.`,
-    hint: 'Pick the option that turns details into meaning.',
-    sourceReference,
-    concept
-  };
-
-  const explainConceptExercise: Exercise = {
-    id: createId('exercise'),
-    type: 'explain_concept',
-    prompt: `Explain ${concept.toLowerCase()} in your own words for someone reviewing this material tomorrow.`,
-    answer: `${concept} connects details to the larger learning goal.`,
-    acceptedAnswers: [
-      `${concept.toLowerCase()} connects details`,
-      `${concept.toLowerCase()} supports the main idea`,
-      `${concept.toLowerCase()} helps explain the learning goal`
-    ],
-    explanation: `A good explanation does not need to be long. It should show what ${concept.toLowerCase()} means and why it matters in the course path.`,
-    hint: 'Mention what it means and why it matters.',
-    sourceReference,
-    concept
-  };
-
-  const baseExercises: Exercise[] = [
+  return [
     {
       id: createId('exercise'),
       type: 'multiple_choice',
       prompt: `In “${lessonTitle},” what is the best first step for learning ${concept.toLowerCase()}?`,
-      choices: createChoices(multipleChoiceAnswer, multipleChoiceDistractors),
+      choices: createChoices(multipleChoiceAnswer, [
+        'Ignore the source and rely only on prior knowledge.',
+        'Memorize every sentence without grouping ideas.',
+        'Treat all details as equally important.'
+      ]),
       answer: multipleChoiceAnswer,
       acceptedAnswers: [multipleChoiceAnswer],
       explanation: `${reviewLanguage} The best first step is to connect ${concept.toLowerCase()} to the source material's main idea, because that makes later details easier to organize.`,
@@ -255,7 +158,7 @@ function createExerciseSet(
       type: 'true_false',
       prompt: `True or false: Understanding ${concept.toLowerCase()} is easier when you connect it to examples from the source material.`,
       answer: true,
-      acceptedAnswers: ['true', 'yes'],
+      acceptedAnswers: ['true'],
       explanation: `True. Examples act like anchors, so ${concept.toLowerCase()} becomes easier to recall and apply later.`,
       hint: 'Think about whether examples make abstract ideas more concrete.',
       sourceReference,
@@ -263,26 +166,48 @@ function createExerciseSet(
     },
     {
       id: createId('exercise'),
-      type: 'fill_blank',
-      prompt: `Fill in the blank: A useful study path turns scattered notes into a clear ______ path.`,
-      answer: 'learning',
-      acceptedAnswers: ['learning', 'study', 'practice'],
-      explanation:
-        'The mock course is designed to transform raw source material into a structured learning path with lessons, practice, and review.',
-      hint: 'The app tagline uses a similar idea.',
+      type: 'multiple_choice',
+      prompt: `Which choice best supports a playful, bite-sized lesson about ${concept.toLowerCase()}?`,
+      choices: createChoices(secondChoiceAnswer, [
+        'Add unsupported facts that sound interesting.',
+        'Skip practice until the end of the course.',
+        'Use only facts that are not in the source.'
+      ]),
+      answer: secondChoiceAnswer,
+      acceptedAnswers: [secondChoiceAnswer],
+      explanation: `A source-grounded course uses the material itself and turns supported ideas about ${concept.toLowerCase()} into short practice.`,
+      hint: 'Choose the option that stays closest to the source material.',
+      sourceReference,
+      concept
+    },
+    {
+      id: createId('exercise'),
+      type: 'true_false',
+      prompt: `True or false: A review lesson can revisit ${concept.toLowerCase()} without adding unsupported outside facts.`,
+      answer: true,
+      acceptedAnswers: ['true'],
+      explanation: 'Review can strengthen recall by reusing supported material rather than adding new claims.',
+      hint: 'Think about what source-grounded means.',
+      sourceReference,
+      concept
+    },
+    {
+      id: createId('exercise'),
+      type: 'multiple_choice',
+      prompt: `What should a learner do after seeing ${concept.toLowerCase()} in this lesson?`,
+      choices: createChoices(`Use ${concept.toLowerCase()} to organize the lesson idea.`, [
+        'Forget the lesson objective.',
+        'Choose an answer without reading the prompt.',
+        'Replace the source with unrelated examples.'
+      ]),
+      answer: `Use ${concept.toLowerCase()} to organize the lesson idea.`,
+      acceptedAnswers: [`Use ${concept.toLowerCase()} to organize the lesson idea.`],
+      explanation: `Using ${concept.toLowerCase()} as an organizer helps make the lesson clearer and easier to review.`,
+      hint: 'Pick the action that helps organize learning.',
       sourceReference,
       concept
     }
   ];
-
-  const extensionSets: Exercise[][] = [
-    [matchingExercise, conceptCheckExercise],
-    [orderingExercise, conceptCheckExercise],
-    [matchingExercise, orderingExercise],
-    [scenarioExercise, explainConceptExercise]
-  ];
-
-  return [...baseExercises, ...extensionSets[(globalLessonIndex - 1) % extensionSets.length]] satisfies Exercise[];
 }
 
 function createLesson(
@@ -312,15 +237,15 @@ function createLesson(
   };
 }
 
-function createSections(
+function createUnits(
   keyConcepts: string[],
   sourcePreview: string
-): Section[] {
+): Unit[] {
   let globalLessonIndex = 0;
 
-  return MOCK_SECTION_BLUEPRINTS.map((sectionBlueprint) => {
-    const units: Unit[] = sectionBlueprint.units.map((unitBlueprint) => {
-      const lessons: Lesson[] = unitBlueprint.lessons.map((lessonBlueprint) => {
+  return MOCK_SECTION_BLUEPRINTS.map((unitBlueprint) => {
+    const sections: Section[] = unitBlueprint.units.map((sectionBlueprint) => {
+      const lessons: Lesson[] = sectionBlueprint.lessons.map((lessonBlueprint) => {
         globalLessonIndex += 1;
         return createLesson(
           lessonBlueprint.title,
@@ -333,29 +258,28 @@ function createSections(
       });
 
       return {
-        id: createId('unit'),
-        title: unitBlueprint.title,
-        description: unitBlueprint.description,
+        id: createId('section'),
+        title: sectionBlueprint.title,
+        description: sectionBlueprint.description,
         lessons
       };
     });
 
     return {
-      id: createId('section'),
-      title: sectionBlueprint.title,
-      description: sectionBlueprint.description,
-      units
+      id: createId('unit'),
+      title: unitBlueprint.title,
+      description: unitBlueprint.description,
+      sections
     };
   });
 }
 
-function calculateEstimatedTotalMinutes(sections: Section[]): number {
-  return sections.reduce(
-    (sectionTotal, section) =>
-      sectionTotal +
-      section.units.reduce(
-        (unitTotal, unit) =>
-          unitTotal + unit.lessons.reduce((lessonTotal, lesson) => lessonTotal + lesson.estimatedMinutes, 0),
+function calculateEstimatedTotalMinutes(units: Unit[]): number {
+  return units.reduce(
+    (unitTotal, unit) =>
+      unitTotal + unit.sections.reduce(
+        (sectionTotal, section) =>
+          sectionTotal + section.lessons.reduce((lessonTotal, lesson) => lessonTotal + lesson.estimatedMinutes, 0),
         0
       ),
     0
@@ -369,7 +293,7 @@ export function generateMockCourse({
   const now = new Date().toISOString();
   const sourcePreview = getSourcePreview(sourceMaterial);
   const keyConcepts = extractKeyConcepts(sourceMaterial);
-  const sections = createSections(keyConcepts, sourcePreview);
+  const units = createUnits(keyConcepts, sourcePreview);
   const title = optionalTitle?.trim() || MOCK_COURSE_TITLE;
 
   return {
@@ -379,8 +303,8 @@ export function generateMockCourse({
     sourceMaterialPreview: sourcePreview,
     createdAt: now,
     updatedAt: now,
-    estimatedTotalMinutes: calculateEstimatedTotalMinutes(sections),
-    sections,
+    estimatedTotalMinutes: calculateEstimatedTotalMinutes(units),
+    units,
     keyConcepts
   };
 }
@@ -396,34 +320,26 @@ export function generateMockCourseFromValues(
 }
 
 export function getFirstLessonId(course: Course): string | undefined {
-  return course.sections[0]?.units[0]?.lessons[0]?.id;
+  return course.units[0]?.sections[0]?.lessons[0]?.id;
 }
 
 export function getAllLessonIds(course: Course): string[] {
-  return course.sections.flatMap((section) =>
-    section.units.flatMap((unit) => unit.lessons.map((lesson) => lesson.id))
+  return course.units.flatMap((unit) =>
+    unit.sections.flatMap((section) => section.lessons.map((lesson) => lesson.id))
   );
 }
 
 export function getExerciseTypeCounts(course: Course): Record<ExerciseType, number> {
-  const exerciseTypes: ExerciseType[] = [
-    'multiple_choice',
-    'true_false',
-    'fill_blank',
-    'matching',
-    'ordering',
-    'scenario',
-    'explain_concept'
-  ];
+  const exerciseTypes: ExerciseType[] = ['multiple_choice', 'true_false'];
 
   const initialCounts = exerciseTypes.reduce<Record<ExerciseType, number>>((counts, type) => {
     counts[type] = 0;
     return counts;
   }, {} as Record<ExerciseType, number>);
 
-  return course.sections.reduce((counts, section) => {
-    section.units.forEach((unit) => {
-      unit.lessons.forEach((lesson) => {
+  return course.units.reduce((counts, unit) => {
+    unit.sections.forEach((section) => {
+      section.lessons.forEach((lesson) => {
         lesson.exercises.forEach((exercise) => {
           counts[exercise.type] += 1;
         });

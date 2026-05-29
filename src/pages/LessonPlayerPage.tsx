@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageCard } from '../components/PageCard';
 import { AnimatedNumber, ConfettiBurst, ProgressBar } from '../components/Polish';
 import { getCourseById } from '../services/courseService';
@@ -11,7 +11,7 @@ import {
   type LessonAttemptSaveResult
 } from '../services/progressService';
 import type { ReviewSession } from '../services/reviewService';
-import type { Course, Exercise, ExerciseAnswer, Lesson, MatchingPair, OrderingItem } from '../types/course';
+import type { Course, Exercise, ExerciseAnswer, Lesson } from '../types/course';
 import { classNames } from '../utils/classNames';
 import { ROBOT_GRAPHICS } from '../data/mascotGraphics';
 
@@ -44,27 +44,6 @@ interface LocalLessonResult {
 }
 
 const PASSING_PERCENTAGE = 70;
-const SHORT_ANSWER_STOP_WORDS = new Set([
-  'about',
-  'after',
-  'could',
-  'every',
-  'helps',
-  'into',
-  'later',
-  'learn',
-  'material',
-  'source',
-  'study',
-  'their',
-  'there',
-  'these',
-  'thing',
-  'understand',
-  'while',
-  'with'
-]);
-
 function findLesson(courseId: string | null, lessonId: string | null): LessonLookupResult | null {
   if (!courseId || !lessonId) {
     return null;
@@ -76,9 +55,9 @@ function findLesson(courseId: string | null, lessonId: string | null): LessonLoo
     return null;
   }
 
-  for (const section of course.sections) {
-    for (const unit of section.units) {
-      const lesson = unit.lessons.find((candidate) => candidate.id === lessonId);
+  for (const unit of course.units) {
+    for (const section of unit.sections) {
+      const lesson = section.lessons.find((candidate) => candidate.id === lessonId);
 
       if (lesson) {
         return { course, lesson };
@@ -131,123 +110,7 @@ function matchesExactAcceptedAnswer(submittedAnswer: string, exercise: Exercise)
   });
 }
 
-function matchesFlexibleAcceptedAnswer(submittedAnswer: string, exercise: Exercise): boolean {
-  const normalizedSubmission = normalizeText(submittedAnswer);
-
-  if (!normalizedSubmission) {
-    return false;
-  }
-
-  return getAcceptedAnswers(exercise).some((acceptedAnswer) => {
-    const normalizedAccepted = normalizeText(acceptedAnswer);
-
-    return (
-      normalizedAccepted.length > 0 &&
-      (normalizedSubmission === normalizedAccepted ||
-        normalizedSubmission.includes(normalizedAccepted) ||
-        normalizedAccepted.includes(normalizedSubmission))
-    );
-  });
-}
-
-function extractKeywords(value: string): string[] {
-  const words = normalizeText(value).match(/[a-z0-9'-]{4,}/g) ?? [];
-
-  return Array.from(new Set(words.filter((word) => !SHORT_ANSWER_STOP_WORDS.has(word))));
-}
-
-function matchesKeywordAnswer(submittedAnswer: string, exercise: Exercise): boolean {
-  const submittedKeywords = new Set(extractKeywords(submittedAnswer));
-
-  if (submittedKeywords.size === 0) {
-    return false;
-  }
-
-  const answerKeywords = new Set(
-    [
-      ...getAcceptedAnswers(exercise).flatMap(extractKeywords),
-      ...extractKeywords(exercise.concept ?? '')
-    ].filter(Boolean)
-  );
-
-  if (answerKeywords.size === 0) {
-    return false;
-  }
-
-  let matchingKeywordCount = 0;
-  answerKeywords.forEach((keyword) => {
-    if (submittedKeywords.has(keyword)) {
-      matchingKeywordCount += 1;
-    }
-  });
-
-  return matchingKeywordCount >= Math.min(2, answerKeywords.size);
-}
-
-function getMatchingPairs(exercise: Exercise): MatchingPair[] {
-  return exercise.pairs ?? [];
-}
-
-function getOrderingItems(exercise: Exercise): OrderingItem[] {
-  return exercise.items ?? [];
-}
-
-function getOrderingItemLabel(exercise: Exercise, itemId: string): string {
-  return getOrderingItems(exercise).find((item) => item.id === itemId)?.text ?? itemId;
-}
-
-function getCorrectOrderIds(exercise: Exercise): string[] {
-  const itemIds = getOrderingItems(exercise).map((item) => item.id);
-  const correctOrder = exercise.correctOrder ?? [];
-  const correctOrderLooksLikeIds = correctOrder.every((item) => itemIds.includes(item));
-
-  return correctOrderLooksLikeIds && correctOrder.length > 0 ? correctOrder : itemIds;
-}
-
-function getCorrectMatchingLabels(exercise: Exercise): string[] {
-  return getMatchingPairs(exercise).map((pair) => `${pair.left} → ${pair.right}`);
-}
-
-function getSubmittedMatchingLabels(
-  exercise: Exercise,
-  matchingAnswers: Record<string, string>
-): string[] {
-  const pairs = getMatchingPairs(exercise);
-  return pairs.map((pair) => {
-    const selectedDefinitionId = matchingAnswers[pair.id];
-    const selectedDefinition = pairs.find((candidate) => candidate.id === selectedDefinitionId)?.right ?? 'No match selected';
-    return `${pair.left} → ${selectedDefinition}`;
-  });
-}
-
-function isMatchingAnswerCorrect(
-  exercise: Exercise,
-  matchingAnswers: Record<string, string>
-): boolean {
-  const pairs = getMatchingPairs(exercise);
-
-  return pairs.length > 0 && pairs.every((pair) => matchingAnswers[pair.id] === pair.id);
-}
-
-function isOrderingAnswerCorrect(exercise: Exercise, orderedItemIds: string[]): boolean {
-  const correctOrderIds = getCorrectOrderIds(exercise);
-
-  return (
-    correctOrderIds.length > 0 &&
-    orderedItemIds.length === correctOrderIds.length &&
-    orderedItemIds.every((itemId, index) => itemId === correctOrderIds[index])
-  );
-}
-
 function getCorrectAnswer(exercise: Exercise): ExerciseAnswer {
-  if (exercise.type === 'matching') {
-    return getCorrectMatchingLabels(exercise);
-  }
-
-  if (exercise.type === 'ordering') {
-    return getCorrectOrderIds(exercise).map((itemId) => getOrderingItemLabel(exercise, itemId));
-  }
-
   return exercise.answer ?? exercise.acceptedAnswers?.[0] ?? 'Review the explanation below.';
 }
 
@@ -303,19 +166,6 @@ function answerLabel(answer: ExerciseAnswer): string {
   return answer;
 }
 
-function shuffleValues<T>(values: T[]): T[] {
-  return [...values].sort(() => Math.random() - 0.5);
-}
-
-function getInitialOrderingIds(exercise: Exercise | null): string[] {
-  if (!exercise || exercise.type !== 'ordering') {
-    return [];
-  }
-
-  const itemIds = getOrderingItems(exercise).map((item) => item.id);
-  return shuffleValues(itemIds);
-}
-
 export function LessonPlayerPage({
   courseId,
   lessonId,
@@ -337,7 +187,7 @@ export function LessonPlayerPage({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedTotalMinutes: reviewSession.lesson.estimatedMinutes,
-        sections: [],
+        units: [],
         keyConcepts: reviewSession.weakConcepts.map((concept) => concept.concept)
       };
 
@@ -352,11 +202,7 @@ export function LessonPlayerPage({
   const resolvedReturnLabel = returnLabel ?? (isReviewMode ? 'Return from Review' : 'Return to Course Map');
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [selectedChoice, setSelectedChoice] = useState('');
-  const [textAnswer, setTextAnswer] = useState('');
   const [booleanAnswer, setBooleanAnswer] = useState<boolean | null>(null);
-  const [matchingAnswers, setMatchingAnswers] = useState<Record<string, string>>({});
-  const [selectedMatchTermId, setSelectedMatchTermId] = useState<string | null>(null);
-  const [orderedItemIds, setOrderedItemIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [attemptAnswers, setAttemptAnswers] = useState<LessonAttemptAnswer[]>([]);
   const [savedAttempt, setSavedAttempt] = useState<LessonAttemptSaveResult | null>(null);
@@ -366,12 +212,6 @@ export function LessonPlayerPage({
     [lesson]
   );
   const currentExercise = practiceExercises[currentExerciseIndex] ?? null;
-
-  useEffect(() => {
-    setMatchingAnswers({});
-    setSelectedMatchTermId(null);
-    setOrderedItemIds(getInitialOrderingIds(currentExercise));
-  }, [currentExercise?.id]);
 
   if (!lesson || !course) {
     return (
@@ -418,36 +258,12 @@ export function LessonPlayerPage({
       return booleanAnswer !== null;
     }
 
-    if (
-      currentExercise.type === 'fill_blank' ||
-      currentExercise.type === 'explain_concept'
-    ) {
-      return textAnswer.trim().length > 0;
-    }
-
-    if (currentExercise.type === 'scenario') {
-      return currentExercise.choices?.length ? selectedChoice.length > 0 : textAnswer.trim().length > 0;
-    }
-
-    if (currentExercise.type === 'matching') {
-      const pairs = getMatchingPairs(currentExercise);
-      return pairs.length > 0 && pairs.every((pair) => Boolean(matchingAnswers[pair.id]));
-    }
-
-    if (currentExercise.type === 'ordering') {
-      return orderedItemIds.length > 0;
-    }
-
     return false;
   })();
 
   function resetExerciseInput() {
     setSelectedChoice('');
-    setTextAnswer('');
     setBooleanAnswer(null);
-    setMatchingAnswers({});
-    setSelectedMatchTermId(null);
-    setOrderedItemIds(getInitialOrderingIds(lesson?.exercises[currentExerciseIndex + 1] ?? null));
     setFeedback(null);
   }
 
@@ -485,36 +301,6 @@ export function LessonPlayerPage({
     if (currentExercise.type === 'true_false' && booleanAnswer !== null) {
       submittedAnswer = booleanAnswer;
       isCorrect = booleanAnswer === currentExercise.answer;
-    }
-
-    if (currentExercise.type === 'fill_blank') {
-      submittedAnswer = textAnswer;
-      isCorrect = matchesExactAcceptedAnswer(textAnswer, currentExercise);
-    }
-
-    if (currentExercise.type === 'matching') {
-      submittedAnswer = getSubmittedMatchingLabels(currentExercise, matchingAnswers);
-      isCorrect = isMatchingAnswerCorrect(currentExercise, matchingAnswers);
-    }
-
-    if (currentExercise.type === 'ordering') {
-      submittedAnswer = orderedItemIds.map((itemId) => getOrderingItemLabel(currentExercise, itemId));
-      isCorrect = isOrderingAnswerCorrect(currentExercise, orderedItemIds);
-    }
-
-    if (currentExercise.type === 'scenario') {
-      submittedAnswer = currentExercise.choices?.length ? selectedChoice : textAnswer;
-      isCorrect = currentExercise.choices?.length
-        ? matchesExactAcceptedAnswer(selectedChoice, currentExercise)
-        : matchesFlexibleAcceptedAnswer(textAnswer, currentExercise) ||
-          matchesKeywordAnswer(textAnswer, currentExercise);
-    }
-
-    if (currentExercise.type === 'explain_concept') {
-      submittedAnswer = textAnswer;
-      isCorrect =
-        matchesFlexibleAcceptedAnswer(textAnswer, currentExercise) ||
-        matchesKeywordAnswer(textAnswer, currentExercise);
     }
 
     recordAnswer(currentExercise, isCorrect, submittedAnswer);
@@ -591,65 +377,6 @@ export function LessonPlayerPage({
     resetExerciseInput();
   }
 
-  function updateMatchingAnswer(pairId: string, selectedDefinitionId: string) {
-    setMatchingAnswers((previousAnswers) => ({
-      ...previousAnswers,
-      [pairId]: selectedDefinitionId
-    }));
-  }
-
-  function handleMatchTermClick(pairId: string) {
-    if (feedback) {
-      return;
-    }
-
-    playClickSound();
-    setSelectedMatchTermId((currentPairId) => (currentPairId === pairId ? null : pairId));
-  }
-
-  function handleMatchDefinitionClick(definitionPairId: string) {
-    if (feedback || !selectedMatchTermId) {
-      return;
-    }
-
-    playClickSound();
-    updateMatchingAnswer(selectedMatchTermId, definitionPairId);
-    setSelectedMatchTermId(null);
-  }
-
-  function moveOrderingItem(index: number, direction: 'up' | 'down') {
-    setOrderedItemIds((previousIds) => {
-      const nextIndex = direction === 'up' ? index - 1 : index + 1;
-
-      if (nextIndex < 0 || nextIndex >= previousIds.length) {
-        return previousIds;
-      }
-
-      const nextIds = [...previousIds];
-      const currentId = nextIds[index];
-      nextIds[index] = nextIds[nextIndex];
-      nextIds[nextIndex] = currentId;
-      return nextIds;
-    });
-  }
-
-  function renderTextResponseInput(label: string, placeholder: string, note?: string) {
-    return (
-      <label className="block">
-        <span className="mb-2 block text-sm font-black text-slate-600">{label}</span>
-        <textarea
-          value={textAnswer}
-          onChange={(event) => setTextAnswer(event.target.value)}
-          disabled={Boolean(feedback)}
-          rows={5}
-          placeholder={placeholder}
-          className="w-full resize-none rounded-3xl border-0 bg-white px-5 py-4 text-base font-bold leading-7 text-slate-950 ring-2 ring-slate-200 placeholder:text-slate-400 focus:ring-emerald-300"
-        />
-        {note ? <p className="mt-2 text-xs font-bold leading-5 text-slate-500">{note}</p> : null}
-      </label>
-    );
-  }
-
   function renderChoiceButtons(exercise: Exercise) {
     return (
       <div className="grid gap-3">
@@ -711,182 +438,13 @@ export function LessonPlayerPage({
       );
     }
 
-    if (exercise.type === 'fill_blank') {
-      return (
-        <label className="block">
-          <span className="mb-2 block text-sm font-black text-slate-600">Your answer</span>
-          <input
-            type="text"
-            value={textAnswer}
-            onChange={(event) => setTextAnswer(event.target.value)}
-            disabled={Boolean(feedback)}
-            placeholder="Type the missing word or phrase"
-            className="w-full rounded-3xl border-0 bg-white px-5 py-4 text-base font-bold text-slate-950 ring-2 ring-slate-200 placeholder:text-slate-400 focus:ring-emerald-300"
-          />
-        </label>
-      );
-    }
-
-    if (exercise.type === 'matching') {
-      const pairs = getMatchingPairs(exercise);
-      const definitionPairs = pairs.map((pair) => ({ id: pair.id, text: pair.right }));
-      const usedDefinitions = new Set(Object.values(matchingAnswers));
-
-      return (
-        <div className="space-y-4">
-          <div className="rounded-3xl bg-sky-50 p-4 text-sm font-bold leading-6 text-sky-900 ring-1 ring-sky-100">
-            Tap a term, then tap its matching definition. Matched pairs lock into place as you complete the set.
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-3">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Terms</p>
-              {pairs.map((pair, index) => {
-                const selected = selectedMatchTermId === pair.id;
-                const matched = Boolean(matchingAnswers[pair.id]);
-
-                return (
-                  <button
-                    key={pair.id}
-                    type="button"
-                    onClick={() => handleMatchTermClick(pair.id)}
-                    disabled={Boolean(feedback)}
-                    className={classNames(
-                      'w-full rounded-3xl p-4 text-left ring-2 transition sm:p-5',
-                      selected && 'bg-emerald-50 text-emerald-900 ring-emerald-300 shadow-sm shadow-emerald-100',
-                      !selected && matched && 'bg-sky-50 text-sky-900 ring-sky-200',
-                      !selected && !matched && 'bg-white text-slate-800 ring-slate-200 hover:-translate-y-0.5 hover:ring-emerald-200',
-                      feedback && !matched && 'opacity-70'
-                    )}
-                  >
-                    <span className="block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                      Term {index + 1}
-                    </span>
-                    <span className="mt-1 block text-base font-black leading-6">{pair.left}</span>
-                    {matched ? (
-                      <span className="mt-3 block rounded-2xl bg-white/70 px-3 py-2 text-xs font-bold leading-5 text-slate-600 ring-1 ring-white/80">
-                        Matched to: {definitionPairs.find((definitionPair) => definitionPair.id === matchingAnswers[pair.id])?.text ?? 'Matched'}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Definitions</p>
-              {definitionPairs.map((definitionPair, index) => {
-                const used = usedDefinitions.has(definitionPair.id);
-
-                return (
-                  <button
-                    key={definitionPair.id}
-                    type="button"
-                    onClick={() => handleMatchDefinitionClick(definitionPair.id)}
-                    disabled={Boolean(feedback) || !selectedMatchTermId || used}
-                    className={classNames(
-                      'w-full rounded-3xl p-4 text-left text-sm font-bold leading-6 ring-2 transition sm:p-5',
-                      used && 'bg-emerald-50 text-emerald-900 ring-emerald-200 opacity-80',
-                      !used && selectedMatchTermId && 'bg-white text-slate-800 ring-emerald-200 hover:-translate-y-0.5 hover:bg-emerald-50',
-                      !used && !selectedMatchTermId && 'bg-white text-slate-700 ring-slate-200'
-                    )}
-                  >
-                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                      Definition {index + 1}
-                    </span>
-                    {definitionPair.text}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (exercise.type === 'ordering') {
-      const displayedOrder = orderedItemIds.length
-        ? orderedItemIds
-        : getOrderingItems(exercise).map((item) => item.id);
-
-      return (
-        <div className="space-y-4">
-          <div className="rounded-3xl bg-violet-50 p-4 text-sm font-bold leading-6 text-violet-900 ring-1 ring-violet-100">
-            Put the items in the best order. Use the up and down buttons to move each step.
-          </div>
-          <ol className="space-y-3">
-            {displayedOrder.map((itemId, index) => (
-              <li
-                key={itemId}
-                className="flex items-center gap-3 rounded-3xl bg-white p-3 ring-2 ring-slate-200 sm:p-4"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white">
-                  {index + 1}
-                </span>
-                <span className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-800">
-                  {getOrderingItemLabel(exercise, itemId)}
-                </span>
-                <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => { playClickSound(); moveOrderingItem(index, 'up'); }}
-                    disabled={Boolean(feedback) || index === 0}
-                    aria-label={`Move ${getOrderingItemLabel(exercise, itemId)} up`}
-                    className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { playClickSound(); moveOrderingItem(index, 'down'); }}
-                    disabled={Boolean(feedback) || index === displayedOrder.length - 1}
-                    aria-label={`Move ${getOrderingItemLabel(exercise, itemId)} down`}
-                    className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    ↓
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      );
-    }
-
-    if (exercise.type === 'scenario') {
-      if (exercise.choices?.length) {
-        return (
-          <div className="space-y-3">
-            <p className="rounded-3xl bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900 ring-1 ring-amber-100">
-              Apply the lesson to this scenario, then choose the strongest response.
-            </p>
-            {renderChoiceButtons(exercise)}
-          </div>
-        );
-      }
-
-      return renderTextResponseInput(
-        'Your scenario response',
-        'Explain what you would do or choose in this situation',
-        'Scenario answers use accepted-answer and keyword matching for now.'
-      );
-    }
-
-    if (exercise.type === 'explain_concept') {
-      return renderTextResponseInput(
-        'Explain the concept',
-        'Explain it in your own words',
-        'This is graded with simple keyword matching for now. AI grading may be added later.'
-      );
-    }
-
-
     return (
       <div className="rounded-3xl bg-amber-50 p-5 text-sm font-bold leading-6 text-amber-800 ring-1 ring-amber-100">
         This exercise type is not recognized yet.
       </div>
     );
   }
+
 
   if (showEndScreen) {
     return (

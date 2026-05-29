@@ -24,10 +24,10 @@ interface CourseWithProgress {
 }
 
 function getLessonCount(course: Course): number {
-  return course.sections.reduce(
-    (sectionTotal, section) =>
-      sectionTotal +
-      section.units.reduce((unitTotal, unit) => unitTotal + unit.lessons.length, 0),
+  return course.units.reduce(
+    (unitTotal, unit) =>
+      unitTotal +
+      unit.sections.reduce((sectionTotal, section) => sectionTotal + section.lessons.length, 0),
     0
   );
 }
@@ -133,8 +133,8 @@ function CourseCard({
             <p className="mt-1 font-black text-slate-900">{course.estimatedTotalMinutes} min</p>
           </div>
           <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-            <p className="font-bold text-slate-500">Sections</p>
-            <p className="mt-1 font-black text-slate-900">{course.sections.length}</p>
+            <p className="font-bold text-slate-500">Units</p>
+            <p className="mt-1 font-black text-slate-900">{course.units.length}</p>
           </div>
         </div>
 
@@ -216,7 +216,7 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
               Create a complete course from notes, transcripts, PDFs, and study material.
             </h1>
             <p className="mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 sm:text-lg dark:text-slate-300">
-              AdoLearn helps new learners convert notes, uploads, transcripts, articles, and study guides into organized sections, focused lessons, and interactive practice.
+              AdoLearn helps new learners convert notes, uploads, transcripts, articles, and study guides into organized units, focused sections, and interactive practice.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
@@ -262,13 +262,13 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
       <section className="grid gap-5 lg:grid-cols-3">
         <NewUserFeatureCard
           title="Organized from the start"
-          description="Your source material becomes clear sections, units, and bite-sized lessons so learners know exactly where to begin."
+          description="Your source material becomes clear units, sections, and bite-sized lessons so learners know exactly where to begin."
           imageSrc={ROBOT_GRAPHICS.teacher}
           imageAlt="Robot teaching at a whiteboard"
         />
         <NewUserFeatureCard
           title="Practice that sticks"
-          description="AdoLearn adds recall, matching, and ordering practice to help ideas become long-term knowledge."
+          description="AdoLearn adds quick multiple-choice and true/false practice to help ideas become long-term knowledge."
           imageSrc={ROBOT_GRAPHICS.audio}
           imageAlt="Robot reviewing study notes"
         />
@@ -283,10 +283,10 @@ function NewUserDashboard({ onCreateCourse, onOpenSettings }: Pick<DashboardPage
       <section className="overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/20 sm:p-8 dark:bg-slate-900">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-300">Zero courses detected</p>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-300">Your learning space is ready</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Create a course to unlock your dashboard.</h2>
             <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-300">
-              This homepage appears only while local storage has no saved courses. Once you generate your first course, AdoLearn automatically switches to your normal dashboard with stats and saved paths.
+              Create your first course from notes, guides, or learning material. After that, your dashboard will show progress, saved courses, XP, and study activity.
             </p>
           </div>
           <button

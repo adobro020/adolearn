@@ -121,7 +121,7 @@ function normalizeExerciseAnswer(value: unknown): ExerciseAnswer {
   }
 
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string');
+    return value.filter((item): item is string => typeof item === 'string').join(' • ');
   }
 
   if (typeof value === 'string') {
@@ -372,11 +372,11 @@ function normalizeProgressStore(value: unknown): ProgressStore {
     };
   }
 
-  const legacyStats = value.stats ?? value.userStats;
-  const legacyCourses = value.courseProgress ?? value.courses;
+  const storedStats = value.userStats;
+  const storedCourses = value.courses;
 
-  const courses = isRecord(legacyCourses)
-    ? Object.entries(legacyCourses).reduce<Record<string, CourseProgress>>(
+  const courses = isRecord(storedCourses)
+    ? Object.entries(storedCourses).reduce<Record<string, CourseProgress>>(
         (result, [courseId, progress]) => {
           const normalizedProgress = normalizeCourseProgress(progress, courseId);
 
@@ -391,7 +391,7 @@ function normalizeProgressStore(value: unknown): ProgressStore {
     : {};
 
   return {
-    userStats: normalizeUserStats(legacyStats),
+    userStats: normalizeUserStats(storedStats),
     courses
   };
 }
@@ -473,9 +473,9 @@ function calculateMasteryScore(progress: CourseProgress): number {
 }
 
 function getLessonPath(course: Course): LessonPathItem[] {
-  return course.sections.flatMap((section, sectionIndex) =>
-    section.units.flatMap((unit, unitIndex) =>
-      unit.lessons.map((lesson, lessonIndex) => ({
+  return course.units.flatMap((unit, unitIndex) =>
+    unit.sections.flatMap((section, sectionIndex) =>
+      section.lessons.map((lesson, lessonIndex) => ({
         sectionIndex,
         unitIndex,
         lessonIndex,
@@ -508,87 +508,87 @@ function findNextLesson(course: Course, currentLessonId: string): LessonPathItem
   return path[currentIndex + 1] ?? null;
 }
 
-function findFirstLessonOfNextUnit(course: Course, item: LessonPathItem): LessonPathItem | null {
-  const currentSection = course.sections[item.sectionIndex];
-  const nextUnit = currentSection?.units[item.unitIndex + 1];
+function findFirstLessonOfNextSection(course: Course, item: LessonPathItem): LessonPathItem | null {
+  const currentUnit = course.units[item.unitIndex];
+  const nextSection = currentUnit?.sections[item.sectionIndex + 1];
 
-  if (nextUnit?.lessons[0]) {
+  if (nextSection?.lessons[0]) {
     return {
-      sectionIndex: item.sectionIndex,
-      unitIndex: item.unitIndex + 1,
+      unitIndex: item.unitIndex,
+      sectionIndex: item.sectionIndex + 1,
       lessonIndex: 0,
-      lesson: nextUnit.lessons[0]
+      lesson: nextSection.lessons[0]
     };
   }
 
-  const nextSection = course.sections[item.sectionIndex + 1];
-  const firstUnit = nextSection?.units[0];
+  const nextUnit = course.units[item.unitIndex + 1];
+  const firstSection = nextUnit?.sections[0];
 
-  if (firstUnit?.lessons[0]) {
+  if (firstSection?.lessons[0]) {
     return {
-      sectionIndex: item.sectionIndex + 1,
-      unitIndex: 0,
+      unitIndex: item.unitIndex + 1,
+      sectionIndex: 0,
       lessonIndex: 0,
-      lesson: firstUnit.lessons[0]
+      lesson: firstSection.lessons[0]
     };
   }
 
   return null;
 }
 
-function findFirstLessonOfNextSection(course: Course, item: LessonPathItem): LessonPathItem | null {
-  const nextSection = course.sections[item.sectionIndex + 1];
-  const firstUnit = nextSection?.units[0];
+function findFirstLessonOfNextUnit(course: Course, item: LessonPathItem): LessonPathItem | null {
+  const nextUnit = course.units[item.unitIndex + 1];
+  const firstSection = nextUnit?.sections[0];
 
-  if (!firstUnit?.lessons[0]) {
+  if (!firstSection?.lessons[0]) {
     return null;
   }
 
   return {
-    sectionIndex: item.sectionIndex + 1,
-    unitIndex: 0,
+    unitIndex: item.unitIndex + 1,
+    sectionIndex: 0,
     lessonIndex: 0,
-    lesson: firstUnit.lessons[0]
+    lesson: firstSection.lessons[0]
   };
 }
 
-function areUnitLessonsBeforeReviewComplete(course: Course, item: LessonPathItem, completedLessons: Set<string>): boolean {
-  const unit = course.sections[item.sectionIndex]?.units[item.unitIndex];
-
-  if (!unit) {
-    return false;
-  }
-
-  const reviewIndex = unit.lessons.findIndex((lesson) => lesson.type === 'review');
-
-  if (reviewIndex < 0) {
-    return false;
-  }
-
-  return unit.lessons
-    .slice(0, reviewIndex)
-    .every((lesson) => lesson.type === 'review' || completedLessons.has(lesson.id));
-}
-
-function areSectionLessonsBeforeFinalChallengeComplete(
-  course: Course,
-  item: LessonPathItem,
-  completedLessons: Set<string>
-): boolean {
-  const section = course.sections[item.sectionIndex];
+function areSectionLessonsBeforeReviewComplete(course: Course, item: LessonPathItem, completedLessons: Set<string>): boolean {
+  const section = course.units[item.unitIndex]?.sections[item.sectionIndex];
 
   if (!section) {
     return false;
   }
 
-  const sectionLessons = section.units.flatMap((unit) => unit.lessons);
-  const finalChallengeIndex = sectionLessons.findIndex((lesson) => lesson.type === 'final_challenge');
+  const reviewIndex = section.lessons.findIndex((lesson) => lesson.type === 'review');
+
+  if (reviewIndex < 0) {
+    return false;
+  }
+
+  return section.lessons
+    .slice(0, reviewIndex)
+    .every((lesson) => lesson.type === 'review' || completedLessons.has(lesson.id));
+}
+
+function areUnitLessonsBeforeFinalChallengeComplete(
+  course: Course,
+  item: LessonPathItem,
+  completedLessons: Set<string>
+): boolean {
+  const unit = course.units[item.unitIndex];
+
+  if (!unit) {
+    return false;
+  }
+
+  const unitLessons = unit.sections.flatMap((section) => section.lessons);
+  const finalChallengeIndex = unitLessons.findIndex((lesson) => lesson.type === 'final_challenge');
 
   if (finalChallengeIndex < 0) {
     return false;
   }
 
-  return sectionLessons
+  return unitLessons
     .slice(0, finalChallengeIndex)
     .every((lesson) => lesson.type === 'final_challenge' || completedLessons.has(lesson.id));
 }
@@ -612,20 +612,20 @@ function getUnlockedLessonIdsAfterPassing(
     }
 
     if (item.lesson.type === 'final_challenge') {
-      const nextSectionLesson = findFirstLessonOfNextSection(course, item);
+      const nextUnitLesson = findFirstLessonOfNextUnit(course, item);
 
-      if (nextSectionLesson) {
-        unlockedLessons.add(nextSectionLesson.lesson.id);
+      if (nextUnitLesson) {
+        unlockedLessons.add(nextUnitLesson.lesson.id);
       }
 
       return;
     }
 
     if (item.lesson.type === 'review') {
-      const nextUnitLesson = findFirstLessonOfNextUnit(course, item);
+      const nextSectionLesson = findFirstLessonOfNextSection(course, item);
 
-      if (nextUnitLesson) {
-        unlockedLessons.add(nextUnitLesson.lesson.id);
+      if (nextSectionLesson) {
+        unlockedLessons.add(nextSectionLesson.lesson.id);
       }
 
       return;
@@ -638,7 +638,7 @@ function getUnlockedLessonIdsAfterPassing(
     }
 
     if (nextLesson.lesson.type === 'review') {
-      if (areUnitLessonsBeforeReviewComplete(course, nextLesson, completedLessons)) {
+      if (areSectionLessonsBeforeReviewComplete(course, nextLesson, completedLessons)) {
         unlockedLessons.add(nextLesson.lesson.id);
       }
 
@@ -646,7 +646,7 @@ function getUnlockedLessonIdsAfterPassing(
     }
 
     if (nextLesson.lesson.type === 'final_challenge') {
-      if (areSectionLessonsBeforeFinalChallengeComplete(course, nextLesson, completedLessons)) {
+      if (areUnitLessonsBeforeFinalChallengeComplete(course, nextLesson, completedLessons)) {
         unlockedLessons.add(nextLesson.lesson.id);
       }
 

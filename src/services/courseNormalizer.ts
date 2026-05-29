@@ -6,8 +6,6 @@ import type {
   ExerciseType,
   Lesson,
   LessonType,
-  MatchingPair,
-  OrderingItem,
   Section,
   SourceReference,
   Unit
@@ -81,7 +79,6 @@ function ensureUniqueId(value: unknown, prefix: string, seenIds: Set<string>): s
   return generatedId;
 }
 
-
 function normalizeLessonType(value: unknown): LessonType {
   return VALID_LESSON_TYPES.includes(value as LessonType) ? (value as LessonType) : 'standard';
 }
@@ -90,13 +87,27 @@ function normalizeExerciseType(value: unknown): ExerciseType {
   return VALID_EXERCISE_TYPES.includes(value as ExerciseType) ? (value as ExerciseType) : 'multiple_choice';
 }
 
-function normalizeAnswer(value: unknown): ExerciseAnswer | undefined {
-  if (typeof value === 'string' || typeof value === 'boolean') {
-    return value;
+function normalizeAnswer(value: unknown, type: ExerciseType): ExerciseAnswer | undefined {
+  if (type === 'true_false') {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (['true', 'yes', 'correct'].includes(normalized)) {
+        return true;
+      }
+      if (['false', 'no', 'incorrect'].includes(normalized)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean);
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
   }
 
   return undefined;
@@ -108,11 +119,7 @@ function answerToAcceptedAnswers(answer: ExerciseAnswer | undefined): string[] {
   }
 
   if (typeof answer === 'boolean') {
-    return [String(answer)];
-  }
-
-  if (Array.isArray(answer)) {
-    return answer.map((item) => item.trim()).filter(Boolean);
+    return [answer ? 'true' : 'false'];
   }
 
   return [answer.trim()].filter(Boolean);
@@ -142,66 +149,24 @@ function normalizeChoices(value: unknown, seenIds: Set<string>): ExerciseChoice[
   return choices.length > 0 ? choices : undefined;
 }
 
-function normalizePairs(value: unknown, seenIds: Set<string>): MatchingPair[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
+function ensureMultipleChoiceChoices(choices: ExerciseChoice[] | undefined, answer: ExerciseAnswer | undefined, seenIds: Set<string>): ExerciseChoice[] {
+  const normalizedChoices = choices && choices.length >= 2 ? [...choices] : [];
+  const answerText = typeof answer === 'string' && answer.trim() ? answer.trim() : 'The source-supported answer';
+  const hasAnswer = normalizedChoices.some((choice) => choice.text === answerText);
+
+  if (!hasAnswer) {
+    normalizedChoices.unshift({ id: ensureUniqueId(undefined, 'choice', seenIds), text: answerText });
   }
 
-  const pairs = value.reduce<MatchingPair[]>((result, pair, index) => {
-    if (!isRecord(pair)) {
-      return result;
+  const fallbackDistractors = ['Another option', 'A less supported option', 'Not supported by the source'];
+  for (const distractor of fallbackDistractors) {
+    if (normalizedChoices.length >= 2) {
+      break;
     }
-
-    const left = trimText(pair.left, `Term ${index + 1}`, 300);
-    const right = trimText(pair.right, `Definition ${index + 1}`, 500);
-
-    result.push({
-      id: ensureUniqueId(pair.id, 'pair', seenIds),
-      left,
-      right
-    });
-
-    return result;
-  }, []);
-
-  return pairs.length > 0 ? pairs : undefined;
-}
-
-function normalizeItems(value: unknown, seenIds: Set<string>): OrderingItem[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
+    normalizedChoices.push({ id: ensureUniqueId(undefined, 'choice', seenIds), text: distractor });
   }
 
-  const items = value.reduce<OrderingItem[]>((result, item, index) => {
-    if (!isRecord(item)) {
-      if (typeof item === 'string' && item.trim()) {
-        result.push({ id: ensureUniqueId(undefined, 'order', seenIds), text: trimText(item, `Step ${index + 1}`, 400) });
-      }
-      return result;
-    }
-
-    result.push({
-      id: ensureUniqueId(item.id, 'order', seenIds),
-      text: trimText(item.text, `Step ${index + 1}`, 400)
-    });
-
-    return result;
-  }, []);
-
-  return items.length > 0 ? items : undefined;
-}
-
-function normalizeCorrectOrder(value: unknown, items: OrderingItem[] | undefined): string[] | undefined {
-  const itemIds = new Set((items ?? []).map((item) => item.id));
-  const incomingOrder = Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string' && itemIds.has(item))
-    : [];
-
-  if (incomingOrder.length > 0) {
-    return incomingOrder;
-  }
-
-  return items && items.length > 0 ? items.map((item) => item.id) : undefined;
+  return normalizedChoices;
 }
 
 function normalizeSourceReference(value: unknown): SourceReference | undefined {
@@ -209,23 +174,20 @@ function normalizeSourceReference(value: unknown): SourceReference | undefined {
     return undefined;
   }
 
-  return {
+  const sourceReference: SourceReference = {
     sourceId: typeof value.sourceId === 'string' ? trimText(value.sourceId, '', 120) : undefined,
     title: typeof value.title === 'string' ? trimText(value.title, '', 180) : undefined,
     excerpt: typeof value.excerpt === 'string' ? trimText(value.excerpt, '', 500) : undefined,
     location: typeof value.location === 'string' ? trimText(value.location, '', 180) : undefined
   };
+
+  return Object.values(sourceReference).some(Boolean) ? sourceReference : undefined;
 }
 
 function getDefaultExplanation(exerciseType: ExerciseType): string {
   const explanations: Record<ExerciseType, string> = {
     multiple_choice: 'The correct answer is grounded in the source material and reinforces the lesson concept.',
-    true_false: 'The answer checks whether the statement is supported by the lesson material.',
-    fill_blank: 'The blank should be filled with a key idea from the lesson.',
-    matching: 'The correct matches connect terms to their meanings.',
-    ordering: 'The correct order follows the logical sequence taught in the lesson.',
-    scenario: 'The scenario applies the lesson concept to a realistic situation.',
-    explain_concept: 'A good explanation defines the concept and says why it matters.'
+    true_false: 'The answer checks whether the statement is supported by the lesson material.'
   };
 
   return explanations[exerciseType];
@@ -234,25 +196,24 @@ function getDefaultExplanation(exerciseType: ExerciseType): string {
 function normalizeExercise(value: unknown, index: number, seenIds: Set<string>): Exercise {
   const record = isRecord(value) ? value : {};
   const type = normalizeExerciseType(record.type);
-  const answer = normalizeAnswer(record.answer);
-  const choices = normalizeChoices(record.choices, seenIds);
-  const pairs = normalizePairs(record.pairs, seenIds);
-  const items = normalizeItems(record.items, seenIds);
-  const acceptedAnswers = normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(answer));
+  const incomingAnswer = normalizeAnswer(record.answer, type);
+  const acceptedAnswers = normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(incomingAnswer));
+  const fallbackAnswer = acceptedAnswers[0] ?? (type === 'true_false' ? true : 'The source-supported answer');
+  const answer = incomingAnswer ?? fallbackAnswer;
+  const normalizedChoices = type === 'multiple_choice'
+    ? ensureMultipleChoiceChoices(normalizeChoices(record.choices, seenIds), answer, seenIds)
+    : undefined;
 
   return {
     id: ensureUniqueId(record.id, 'exercise', seenIds),
     type,
     prompt: trimText(record.prompt, `Practice question ${index + 1}`, MAX_PROMPT_LENGTH),
-    choices,
+    choices: normalizedChoices,
     answer,
-    acceptedAnswers,
+    acceptedAnswers: normalizeStringArray(record.acceptedAnswers, answerToAcceptedAnswers(answer)),
     explanation: trimText(record.explanation, getDefaultExplanation(type), MAX_EXPLANATION_LENGTH),
     hint: trimText(record.hint, '', MAX_HINT_LENGTH),
     sourceReference: normalizeSourceReference(record.sourceReference),
-    pairs,
-    items,
-    correctOrder: normalizeCorrectOrder(record.correctOrder, items),
     concept: typeof record.concept === 'string' ? trimText(record.concept, '', 160) : undefined
   };
 }
@@ -261,7 +222,9 @@ function normalizeLesson(value: unknown, index: number, seenIds: Set<string>): L
   const record = isRecord(value) ? value : {};
   const type = normalizeLessonType(record.type);
   const exercisesSource = Array.isArray(record.exercises) ? record.exercises : [];
-  const exercises = exercisesSource.map((exercise, exerciseIndex) => normalizeExercise(exercise, exerciseIndex, seenIds));
+  const exercises = exercisesSource
+    .map((exercise, exerciseIndex) => normalizeExercise(exercise, exerciseIndex, seenIds))
+    .filter((exercise) => VALID_EXERCISE_TYPES.includes(exercise.type));
   const estimatedMinutes = Math.max(
     1,
     Math.round(asNumber(record.estimatedMinutes, type === 'final_challenge' ? 12 : type === 'review' ? 10 : DEFAULT_LESSON_MINUTES))
@@ -277,42 +240,57 @@ function normalizeLesson(value: unknown, index: number, seenIds: Set<string>): L
       'Practice the lesson concept with interactive questions.'
     ]),
     summary: trimText(record.summary, 'A short interactive lesson based on the provided source material.', MAX_SUMMARY_LENGTH),
-    exercises
+    exercises: exercises.length > 0 ? exercises : [normalizeExercise({ type: 'true_false', prompt: 'True or false: this lesson is based on the provided source material.', answer: true, explanation: 'The course is generated from the provided source material.' }, 0, seenIds)]
   };
 }
 
-function normalizeUnit(value: unknown, index: number, seenIds: Set<string>): Unit {
+function getSectionLessonSource(record: Record<string, unknown>): unknown[] {
+  if (Array.isArray(record.lessons)) {
+    return record.lessons;
+  }
+
+  return [];
+}
+
+function normalizeSection(value: unknown, index: number, seenIds: Set<string>): Section {
   const record = isRecord(value) ? value : {};
-  const lessonsSource = Array.isArray(record.lessons) ? record.lessons : [];
+  const lessonsSource = getSectionLessonSource(record);
 
   return {
-    id: ensureUniqueId(record.id, 'unit', seenIds),
-    title: trimText(record.title, `Unit ${index + 1}`, MAX_TITLE_LENGTH),
+    id: ensureUniqueId(record.id, 'section', seenIds),
+    title: trimText(record.title, `Section ${index + 1}`, MAX_TITLE_LENGTH),
     description: trimText(record.description, 'A focused set of bite-sized lessons.', MAX_DESCRIPTION_LENGTH),
     lessons: lessonsSource.map((lesson, lessonIndex) => normalizeLesson(lesson, lessonIndex, seenIds))
   };
 }
 
-function normalizeSection(value: unknown, index: number, seenIds: Set<string>): Section {
+function normalizeUnit(value: unknown, index: number, seenIds: Set<string>): Unit {
   const record = isRecord(value) ? value : {};
-  const unitsSource = Array.isArray(record.units) ? record.units : [];
+  const sectionsSource = Array.isArray(record.sections) ? record.sections : [];
 
   return {
-    id: ensureUniqueId(record.id, 'section', seenIds),
-    title: trimText(record.title, `Section ${index + 1}`, MAX_TITLE_LENGTH),
-    description: trimText(record.description, 'A course section built from the provided source material.', MAX_DESCRIPTION_LENGTH),
-    units: unitsSource.map((unit, unitIndex) => normalizeUnit(unit, unitIndex, seenIds))
+    id: ensureUniqueId(record.id, 'unit', seenIds),
+    title: trimText(record.title, `Unit ${index + 1}`, MAX_TITLE_LENGTH),
+    description: trimText(record.description, 'A course unit built from the provided source material.', MAX_DESCRIPTION_LENGTH),
+    sections: sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds))
   };
 }
 
+function getCourseUnitsSource(record: Record<string, unknown>, seenIds: Set<string>): Unit[] {
+  if (Array.isArray(record.units)) {
+    return record.units.map((unit, unitIndex) => normalizeUnit(unit, unitIndex, seenIds));
+  }
 
-function calculateEstimatedTotalMinutes(sections: Section[]): number {
-  return sections.reduce(
-    (sectionTotal, section) =>
-      sectionTotal +
-      section.units.reduce(
-        (unitTotal, unit) =>
-          unitTotal + unit.lessons.reduce((lessonTotal, lesson) => lessonTotal + lesson.estimatedMinutes, 0),
+  return [];
+}
+
+function calculateEstimatedTotalMinutes(units: Unit[]): number {
+  return units.reduce(
+    (unitTotal, unit) =>
+      unitTotal +
+      unit.sections.reduce(
+        (sectionTotal, section) =>
+          sectionTotal + section.lessons.reduce((lessonTotal, lesson) => lessonTotal + lesson.estimatedMinutes, 0),
         0
       ),
     0
@@ -327,10 +305,9 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
   const now = new Date().toISOString();
   const record = isRecord(candidate) ? candidate : {};
   const seenIds = new Set<string>();
-  const sectionsSource = Array.isArray(record.sections) ? record.sections : [];
-  const sections = sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds));
+  const units = getCourseUnitsSource(record, seenIds);
   const keyConcepts = normalizeStringArray(record.keyConcepts, ['Main idea', 'Key evidence', 'Review concept']);
-  const estimatedTotalMinutes = Math.max(1, calculateEstimatedTotalMinutes(sections));
+  const estimatedTotalMinutes = Math.max(1, calculateEstimatedTotalMinutes(units));
 
   const normalizedCourse: Course = {
     id: ensureUniqueId(record.id, 'course', seenIds),
@@ -348,7 +325,7 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
     createdAt: typeof record.createdAt === 'string' ? record.createdAt : now,
     updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : now,
     estimatedTotalMinutes,
-    sections,
+    units,
     keyConcepts
   };
 
@@ -356,13 +333,12 @@ export function normalizeCourseFromAIJSON(candidate: unknown, options: CourseNor
 }
 
 export function getFirstUnlockableLessonId(course: Course): string | undefined {
-  return course.sections[0]?.units[0]?.lessons[0]?.id;
+  return course.units[0]?.sections[0]?.lessons[0]?.id;
 }
 
 export function getCourseLessonCount(course: Course): number {
-  return course.sections.reduce(
-    (sectionTotal, section) =>
-      sectionTotal + section.units.reduce((unitTotal, unit) => unitTotal + unit.lessons.length, 0),
+  return course.units.reduce(
+    (unitTotal, unit) => unitTotal + unit.sections.reduce((sectionTotal, section) => sectionTotal + section.lessons.length, 0),
     0
   );
 }

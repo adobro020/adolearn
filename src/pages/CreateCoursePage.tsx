@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type DragEvent } from 'react';
 import { PageCard } from '../components/PageCard';
 import { NoticeBanner, ProgressBar } from '../components/Polish';
 import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
@@ -36,7 +36,7 @@ const GENERATION_STEPS: GenerationStep[] = [
   },
   {
     label: 'Designing your learning path',
-    detail: 'Arranging sections, units, lessons, reviews, and challenges.'
+    detail: 'Arranging units, sections, lessons, reviews, and challenges.'
   },
   {
     label: 'Writing bite-sized lessons',
@@ -80,9 +80,6 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-function getGenerationModeLabel(settings: AppSettings): string {
-  return settings.modelName || 'AI';
-}
 
 function getVisibleStepIndex(activeStepIndex: number): number {
   return Math.min(Math.max(activeStepIndex, 0), GENERATION_STEPS.length - 1);
@@ -123,10 +120,14 @@ function FullScreenGenerationOverlay({
             </div>
           ) : (
             <div
-              className="h-16 w-16 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"
+              className="relative h-20 w-20 rounded-full"
               aria-label="Loading"
               role="progressbar"
-            />
+            >
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-100/80 dark:border-emerald-400/15" aria-hidden="true" />
+              <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-r-sky-400 border-t-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.22)]" aria-hidden="true" />
+              <div className="absolute inset-3 animate-pulse rounded-full bg-emerald-50 shadow-inner dark:bg-emerald-400/10" aria-hidden="true" />
+            </div>
           )}
         </div>
       </div>
@@ -175,7 +176,6 @@ function formatFileUploadBlock(fileName: string, contents: string): string {
 }
 
 export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
-  const settings = useMemo(() => getSettings(), []);
   const [courseTitle, setCourseTitle] = useState('');
   const [sourceMaterial, setSourceMaterial] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -407,7 +407,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       if (!didSaveCourse) {
         throw new Error(
           isLikelyTooLargeForBrowserStorage(generatedCourse)
-            ? 'The generated course was too large to save locally. Try a shorter source or shorter course settings.'
+            ? 'The generated course was too large to save locally. Try shorter source material.'
             : 'The generated course could not be saved locally. Try again with shorter source material or a smaller course.'
         );
       }
@@ -438,7 +438,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       <PageCard
         eyebrow="Create"
         title="Build a learning path"
-        description="Paste notes, a transcript, an article, or a study guide. AdoLearn uses the Server proxy and your selected GPT-5 model to generate a structured course."
+        description="Paste notes, a transcript, an article, or a study guide to turn your material into a structured course."
       >
         <form
           className="space-y-6"
@@ -458,7 +458,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                   Turn anything into a structured learning path
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-                  More detail usually creates better lessons. Short sources still work, but richer material usually creates better sections, units, and practice.
+                  More detail usually creates better lessons. Short sources still work, but richer material usually creates better units, sections, and practice.
                 </p>
                 <div className="mt-5 max-w-lg">
                   <ProgressBar

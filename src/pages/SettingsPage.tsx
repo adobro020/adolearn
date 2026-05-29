@@ -54,9 +54,9 @@ function formatDate(value: string): string {
 }
 
 function getCourseLessonCount(course: Course): number {
-  return course.sections.reduce(
-    (sectionTotal, section) =>
-      sectionTotal + section.units.reduce((unitTotal, unit) => unitTotal + unit.lessons.length, 0),
+  return course.units.reduce(
+    (unitTotal, unit) =>
+      unitTotal + unit.sections.reduce((sectionTotal, section) => sectionTotal + section.lessons.length, 0),
     0
   );
 }
@@ -283,12 +283,6 @@ export function SettingsPage() {
         description="Choose how AdoLearn looks and manages saved data on this device."
       >
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[1.75rem] bg-gradient-to-br from-emerald-50 to-sky-50 p-5 ring-1 ring-emerald-100">
-            <h3 className="text-lg font-black text-slate-950">Production-ready app</h3>
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
-              Real AI generation uses the Server proxy route. Courses and progress remain local to this browser; AdoLearn still has no accounts, database, or cloud course storage.
-            </p>
-          </div>
           <div className="rounded-[1.75rem] bg-white p-5 ring-1 ring-slate-200">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
               Browser save status

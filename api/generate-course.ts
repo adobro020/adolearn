@@ -37,36 +37,30 @@ interface OpenAIResponsePayload {
 }
 
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
-const DEFAULT_MODEL = 'gpt-5.4-nano';
-const ALLOWED_MODELS = new Set(['gpt-5.4-nano', 'gpt-5-nano', 'gpt-5-mini', 'gpt-5']);
+const DEFAULT_MODEL = 'gpt-5.4-mini';
+const ALLOWED_MODELS = new Set(['gpt-5.4-mini', 'gpt-5-mini', 'gpt-5']);
 const MAX_REQUEST_BYTES = 1_000_000;
 const MAX_SOURCE_MATERIAL_CHARACTERS = 120_000;
 const COURSE_SCHEMA = {
   type: 'object',
   additionalProperties: true,
-  required: [
-    'title',
-    'description',
-    'estimatedTotalMinutes',
-    'sections',
-    'keyConcepts'
-  ],
+  required: ['title', 'description', 'estimatedTotalMinutes', 'units', 'keyConcepts'],
   properties: {
     title: { type: 'string' },
     description: { type: 'string' },
     sourceMaterialPreview: { type: 'string' },
     estimatedTotalMinutes: { type: 'number' },
     keyConcepts: { type: 'array', items: { type: 'string' } },
-    sections: {
+    units: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: true,
-        required: ['title', 'description', 'units'],
+        required: ['title', 'description', 'sections'],
         properties: {
           title: { type: 'string' },
           description: { type: 'string' },
-          units: {
+          sections: {
             type: 'array',
             items: {
               type: 'object',
@@ -80,14 +74,7 @@ const COURSE_SCHEMA = {
                   items: {
                     type: 'object',
                     additionalProperties: true,
-                    required: [
-                      'title',
-                      'type',
-                      'estimatedMinutes',
-                      'learningObjectives',
-                      'summary',
-                      'exercises'
-                    ],
+                    required: ['title', 'type', 'estimatedMinutes', 'learningObjectives', 'summary', 'exercises'],
                     properties: {
                       title: { type: 'string' },
                       type: { type: 'string', enum: ['standard', 'review', 'final_challenge'] },
@@ -101,45 +88,9 @@ const COURSE_SCHEMA = {
                           additionalProperties: true,
                           required: ['type', 'prompt', 'explanation'],
                           properties: {
-                            type: {
-                              type: 'string',
-                              enum: [
-                                'multiple_choice',
-                                'true_false',
-                                'matching',
-                                'ordering'
-                              ]
-                            },
+                            type: { type: 'string', enum: ['multiple_choice', 'true_false'] },
                             prompt: { type: 'string' },
                             choices: {
-                              type: 'array',
-                              items: {
-                                type: 'object',
-                                additionalProperties: true,
-                                properties: {
-                                  id: { type: 'string' },
-                                  text: { type: 'string' },
-                                  isCorrect: { type: 'boolean' }
-                                }
-                              }
-                            },
-                            answer: { type: ['string', 'boolean', 'number'] },
-                            acceptedAnswers: { type: 'array', items: { type: 'string' } },
-                            explanation: { type: 'string' },
-                            hint: { type: 'string' },
-                            sourceReference: { type: 'string' },
-                            pairs: {
-                              type: 'array',
-                              items: {
-                                type: 'object',
-                                additionalProperties: true,
-                                properties: {
-                                  left: { type: 'string' },
-                                  right: { type: 'string' }
-                                }
-                              }
-                            },
-                            items: {
                               type: 'array',
                               items: {
                                 type: 'object',
@@ -150,7 +101,11 @@ const COURSE_SCHEMA = {
                                 }
                               }
                             },
-                            correctOrder: { type: 'array', items: { type: 'string' } },
+                            answer: { type: ['string', 'boolean'] },
+                            acceptedAnswers: { type: 'array', items: { type: 'string' } },
+                            explanation: { type: 'string' },
+                            hint: { type: 'string' },
+                            sourceReference: { type: 'string' },
                             concept: { type: 'string' }
                           }
                         }
@@ -281,12 +236,12 @@ async function readRequestBody(request: ApiRequest): Promise<unknown> {
 function getCourseJSONContractSummary(): string {
   return [
     'Valid lesson types: standard, review, final_challenge',
-    'Valid exercise types: multiple_choice, true_false, matching, ordering',
-    'Every course must contain sections, every section must contain units, every unit must contain lessons, and every lesson must contain exercises.',
-    'Every exercise must include a prompt and an explanation.',
-    'multiple_choice exercises require choices.',
-    'matching exercises require term-to-definition pairs.',
-    'ordering exercises require items and correctOrder.'
+    'Valid exercise types: multiple_choice, true_false',
+    'Every course must contain units, every unit must contain sections, every section must contain lessons, and every lesson must contain exercises.',
+    'Every lesson must include learning objectives.',
+    'Every exercise must include a prompt, an explanation, and a hint when possible.',
+    'multiple_choice exercises require choices and the correct answer.',
+    'true_false exercises require a boolean answer.'
   ].join('\n');
 }
 
@@ -302,36 +257,33 @@ function buildCourseGenerationPrompt(
 ): string {
   const providedTitle = options.optionalTitle?.trim() || 'Create a concise, learner-friendly course title from the provided source material.';
 
-  return `You are an expert instructional designer creating an interactive AdoLearn course.
+  return `You are an expert instructional designer creating an interactive course for AdoLearn.
 
-Transform the provided source material into a short, structured, playful, bite-sized course.
+Your task:
+Transform the provided source material into a structured and interactive learning course.
 
-Rules:
-
-Use only the source material. Do not invent facts, examples, claims, dates, stats, citations, or definitions.
-Leave out unsupported details or generalize only when source-grounded.
-Return valid JSON only, with no markdown, code fences, or commentary.
-Return one top-level Course object directly, not wrapped in a course property.
-Match the AdoLearn Course type and schema contract below.
+Hard rules:
+- Use only the provided source material.
+- If the source material does not support a detail, leave it out or write a source-grounded generalization.
+- Return valid JSON only. Do not include markdown, code fences, commentary, or explanations outside the JSON.
+- Return one top-level Course object directly, not an object wrapped in a \`course\` property.
+- The JSON must match the AdoLearn Course type and the schema-like contract below.
+- Keep lessons interactive and learner-friendly.
+- Include explanations and hints for exercises.
+- Include learning objectives for every lesson.
+- Include key concepts for the course.
+- Include review lessons.
+- Make the experience feel playful, clear, and bite-sized.
+- Make sure the questions and answers actually make sense.
 
 Course title: ${providedTitle}
 
-Course structure:
+Make the units, sections, lessons, and exercises per lesson based off how long the source material is. 
 
-About 2 sections
-About 2 units per section
-About 3 lessons per unit
-About 5 exercises per lesson
-Include course key concepts, lesson objectives, review lessons, final challenges, explanations, and hints.
-
-Lesson exercises:
-
-Use a mix of multiple_choice, true_false, matching, and ordering.
-Do not use short_answer, fill_blank, scenario, explain_concept, or other typed/written-answer exercises.
-Each exercise should include prompt, explanation, hint, and concept when possible.
-multiple_choice: include choices and the correct answer.
-matching: use term-to-definition pairs only. left must be a short term/concept/person/process/vocabulary phrase; right must be a concise, distinct source-based definition.
-ordering: items must be objects like { "id": "step_1", "text": "..." }; correctOrder must list those same IDs.
+Exercise requirements:
+- Mix lesson exercise types when possible: multiple_choice, true_false. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
+- For multiple_choice, include choices and make sure the correct answer is represented.
+- Every exercise must include prompt, explanation, hint, and concept when possible.
 
 JSON contract summary:
 ${getCourseJSONContractSummary()}
