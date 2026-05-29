@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PageCard } from '../components/PageCard';
 import { AnimatedNumber, ConfettiBurst, ProgressBar } from '../components/Polish';
 import { getCourseById } from '../services/courseService';
+import { playClickSound, playCorrectSound, playIncorrectSound, playLessonCompleteSound, playXpSound } from '../services/soundService';
 import {
   calculateLessonXP,
   recordLessonAttempt,
@@ -522,6 +523,11 @@ export function LessonPlayerPage({
     }
 
     recordAnswer(currentExercise, isCorrect, submittedAnswer);
+    if (isCorrect) {
+      playCorrectSound();
+    } else {
+      playIncorrectSound();
+    }
     setFeedback({
       isCorrect,
       message: isCorrect
@@ -542,6 +548,11 @@ export function LessonPlayerPage({
       isCorrect,
       isCorrect ? 'Self-graded correct' : 'Self-graded incorrect'
     );
+    if (isCorrect) {
+      playCorrectSound();
+    } else {
+      playIncorrectSound();
+    }
     setFeedback({
       isCorrect,
       message: isCorrect
@@ -577,6 +588,13 @@ export function LessonPlayerPage({
           lessonId: lesson.id,
           answers: attemptAnswers
         });
+
+    if (saveResult.passed) {
+      playLessonCompleteSound();
+      window.setTimeout(playXpSound, 260);
+    } else {
+      playIncorrectSound();
+    }
 
     setSavedAttempt(saveResult);
     setShowEndScreen(true);
@@ -650,7 +668,7 @@ export function LessonPlayerPage({
             <button
               key={choice.id}
               type="button"
-              onClick={() => setSelectedChoice(choice.text)}
+              onClick={() => { playClickSound(); setSelectedChoice(choice.text); }}
               disabled={Boolean(feedback)}
               className={classNames(
                 'rounded-3xl px-4 py-4 text-left text-sm font-black leading-6 ring-2 transition sm:px-5',
@@ -683,7 +701,7 @@ export function LessonPlayerPage({
               <button
                 key={String(value)}
                 type="button"
-                onClick={() => setBooleanAnswer(value)}
+                onClick={() => { playClickSound(); setBooleanAnswer(value); }}
                 disabled={Boolean(feedback)}
                 className={classNames(
                   'rounded-3xl px-4 py-5 text-center text-lg font-black ring-2 transition',
@@ -746,7 +764,7 @@ export function LessonPlayerPage({
                 <span className="mt-1 block text-base font-black text-slate-950">{pair.left}</span>
                 <select
                   value={matchingAnswers[pair.id] ?? ''}
-                  onChange={(event) => updateMatchingAnswer(pair.id, event.target.value)}
+                  onChange={(event) => { playClickSound(); updateMatchingAnswer(pair.id, event.target.value); }}
                   disabled={Boolean(feedback)}
                   className="mt-3 w-full rounded-2xl border-0 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 ring-1 ring-slate-200 focus:ring-emerald-300"
                 >
@@ -789,7 +807,7 @@ export function LessonPlayerPage({
                 <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
-                    onClick={() => moveOrderingItem(index, 'up')}
+                    onClick={() => { playClickSound(); moveOrderingItem(index, 'up'); }}
                     disabled={Boolean(feedback) || index === 0}
                     aria-label={`Move ${getOrderingItemLabel(exercise, itemId)} up`}
                     className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
@@ -798,7 +816,7 @@ export function LessonPlayerPage({
                   </button>
                   <button
                     type="button"
-                    onClick={() => moveOrderingItem(index, 'down')}
+                    onClick={() => { playClickSound(); moveOrderingItem(index, 'down'); }}
                     disabled={Boolean(feedback) || index === displayedOrder.length - 1}
                     aria-label={`Move ${getOrderingItemLabel(exercise, itemId)} down`}
                     className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
@@ -855,7 +873,7 @@ export function LessonPlayerPage({
           {!flashcardRevealed ? (
             <button
               type="button"
-              onClick={() => setFlashcardRevealed(true)}
+              onClick={() => { playClickSound(); setFlashcardRevealed(true); }}
               className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
             >
               Reveal answer
@@ -910,7 +928,7 @@ export function LessonPlayerPage({
         <div className="space-y-6">
           <div
             className={classNames(
-              'relative overflow-hidden rounded-[2rem] p-6 text-center ring-1',
+              'relative overflow-hidden rounded-[2rem] p-6 text-center ring-1 motion-safe:animate-celebratory-pop',
               result.passed
                 ? 'bg-gradient-to-br from-emerald-50 to-sky-50 ring-emerald-100'
                 : 'bg-gradient-to-br from-amber-50 to-orange-50 ring-amber-100'
@@ -942,7 +960,7 @@ export function LessonPlayerPage({
             </div>
             <div className="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
               <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">XP earned</p>
-              <p className="mt-2 text-3xl font-black text-amber-600"><AnimatedNumber value={result.xpEarned} prefix="+" /></p>
+              <p className="mt-2 text-3xl font-black text-amber-600 motion-safe:animate-xp-float"><AnimatedNumber value={result.xpEarned} prefix="+" /></p>
             </div>
           </div>
 
