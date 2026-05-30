@@ -283,7 +283,9 @@ Hard rules:
 
 Course title: ${providedTitle}
 
-Make the units, sections, lessons, and exercises per lesson based off how long the source material is. 
+The source material is ${sourceMaterial.length.toLocaleString()} characters long.
+Use the source material character count to decide how many units, sections, and lessons to create. Shorter sources should create fewer units, sections, and lessons; longer sources can create more coverage, but every unit, section, and lesson must remain source-grounded and bite-sized.
+Make the exercises per lesson based off how long the source material is.
 
 Exercise requirements:
 - Mix lesson exercise types when possible: multiple_choice, true_false. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
