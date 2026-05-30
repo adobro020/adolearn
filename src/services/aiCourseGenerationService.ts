@@ -127,6 +127,22 @@ function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | 
     );
   }
 
+  if (code === 'model_output_incomplete') {
+    return new AICourseGenerationError(
+      'api_error',
+      payload?.error || 'The AI response was cut off before it finished. Try again with shorter source material.',
+      details
+    );
+  }
+
+  if (code === 'invalid_model_response') {
+    return new AICourseGenerationError(
+      'invalid_json',
+      payload?.error || 'The AI returned malformed course JSON. Try again, or use shorter source material.',
+      details
+    );
+  }
+
   if (status >= 500) {
     return new AICourseGenerationError(
       'api_error',

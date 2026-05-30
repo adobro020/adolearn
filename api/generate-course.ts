@@ -29,6 +29,10 @@ interface OpenAIOutputItem {
 interface OpenAIResponsePayload {
   output_text?: string;
   output?: OpenAIOutputItem[];
+  status?: string;
+  incomplete_details?: {
+    reason?: string;
+  };
   error?: {
     message?: string;
     type?: string;
@@ -41,7 +45,9 @@ const DEFAULT_MODEL = 'gpt-5.4-mini';
 const ALLOWED_MODELS = new Set(['gpt-5.4-mini', 'gpt-5-mini', 'gpt-5']);
 const MAX_REQUEST_BYTES = 700_000;
 const MAX_SOURCE_MATERIAL_CHARACTERS = 50_000;
-const OPENAI_REQUEST_TIMEOUT_MS = 55_000;
+const OPENAI_REQUEST_TIMEOUT_MS = 52_000;
+const OPENAI_MAX_OUTPUT_TOKENS = 10_000;
+const MODEL_OUTPUT_PREVIEW_CHARACTERS = 1_200;
 
 function createGenerationRequestId(): string {
   return `adolearn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -145,11 +151,20 @@ function sendJSON(response: ApiResponse, status: number, body: unknown): void {
   response.status(status).json(body);
 }
 
-function sendError(response: ApiResponse, status: number, code: string, message: string): void {
+function sendError(
+  response: ApiResponse,
+  status: number,
+  code: string,
+  message: string,
+  details?: string[],
+  requestId?: string
+): void {
   sendJSON(response, status, {
     ok: false,
     code,
-    error: message
+    error: message,
+    ...(details?.length ? { details } : {}),
+    ...(requestId ? { requestId } : {})
   });
 }
 
@@ -271,18 +286,18 @@ function getCourseSchemaForPrompt(): string {
 
 function getCourseScaleGuidance(characterCount: number): string {
   if (characterCount < 1_500) {
-    return 'Create 1 unit, 1 section, and 2 to 3 short lessons total.';
+    return 'Create 1 unit, 1 section, and 1 to 2 short lessons total. Use 2 exercises per lesson.';
   }
 
   if (characterCount < 8_000) {
-    return 'Create about 1 unit with 1 to 2 sections and 2 to 3 lessons per section.';
+    return 'Create 1 unit with 1 section and 2 to 3 lessons total. Use 2 to 3 exercises per lesson.';
   }
 
   if (characterCount < 20_000) {
-    return 'Create about 2 units, 1 to 2 sections per unit, and 2 to 3 lessons per section.';
+    return 'Create 1 unit with 1 to 2 sections and 2 to 3 lessons per section. Use 2 to 3 exercises per lesson.';
   }
 
-  return 'Create about 2 to 3 units, 2 sections per unit, and 2 to 3 lessons per section. Do not create more structure than the source material can support.';
+  return 'Create 2 units with 1 to 2 sections per unit and 2 lessons per section. Use 2 to 3 exercises per lesson. Do not create more structure than the source material can support.';
 }
 
 function buildCourseGenerationPrompt(
@@ -312,6 +327,7 @@ Hard rules:
 - Include review lessons.
 - Make the experience feel playful, clear, and bite-sized.
 - Make sure the questions and answers actually make sense.
+- Keep all text concise so the JSON stays complete and parseable.
 
 Course title: ${providedTitle}
 
@@ -322,9 +338,10 @@ Make the exercises per lesson based off how long the source material is.
 
 Exercise requirements:
 - Mix lesson exercise types when possible: multiple_choice, true_false. Do not generate short_answer, fill_blank, scenario, explain_concept, or any typed/written-answer exercises inside lessons.
-- Each lesson may contain up to 4 exercises/questions.
-- For multiple_choice, include no more than 4 choices and make sure the correct answer is represented.
-- For each multiple_choice choice, include an explanation field that explains why that specific choice is right or wrong using only the source material.
+- Each lesson should contain 2 to 3 exercises/questions. Never exceed 4.
+- For multiple_choice, include exactly 4 choices when the source supports them; otherwise include at least 2 choices. Make sure the correct answer is represented.
+- For each multiple_choice choice, include a concise explanation field explaining why that specific choice is right or wrong using only the source material.
+- Keep exercise explanations, hints, and choice explanations short.
 - For true_false, the exercise explanation must explain why the correct true/false answer is supported by the source material.
 - Every exercise must include prompt, explanation, hint, and concept when possible.
 
@@ -360,31 +377,228 @@ function stripMarkdownCodeFence(value: string): string {
   return codeFenceMatch ? codeFenceMatch[1].trim() : trimmed;
 }
 
-function extractJSONObjectText(value: string): string {
-  const withoutFence = stripMarkdownCodeFence(value);
 
-  if (withoutFence.startsWith('{') && withoutFence.endsWith('}')) {
-    return withoutFence;
+function getTextPreview(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().slice(0, MODEL_OUTPUT_PREVIEW_CHARACTERS);
+}
+
+function removeTrailingJSONCommas(value: string): string {
+  return value.replace(/,\s*([}\]])/g, '$1');
+}
+
+function appendBalancedJSONClosers(value: string): string {
+  const expectedClosers: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (const character of value) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (character === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (character === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (character === '{') {
+      expectedClosers.push('}');
+      continue;
+    }
+
+    if (character === '[') {
+      expectedClosers.push(']');
+      continue;
+    }
+
+    if (character === '}' || character === ']') {
+      if (expectedClosers[expectedClosers.length - 1] === character) {
+        expectedClosers.pop();
+      }
+    }
   }
+
+  if (inString || expectedClosers.length === 0) {
+    return value;
+  }
+
+  return `${value}${expectedClosers.reverse().join('')}`;
+}
+
+function getJSONCandidateTexts(value: string): string[] {
+  const withoutFence = stripMarkdownCodeFence(value);
+  const candidates = new Set<string>();
+
+  const addCandidate = (candidate: string) => {
+    const trimmed = candidate.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    candidates.add(trimmed);
+    candidates.add(removeTrailingJSONCommas(trimmed));
+    candidates.add(appendBalancedJSONClosers(removeTrailingJSONCommas(trimmed)));
+  };
+
+  addCandidate(withoutFence);
 
   const firstBrace = withoutFence.indexOf('{');
   const lastBrace = withoutFence.lastIndexOf('}');
 
   if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return withoutFence.slice(firstBrace, lastBrace + 1);
+    addCandidate(withoutFence.slice(firstBrace, lastBrace + 1));
+  } else if (firstBrace >= 0) {
+    addCandidate(withoutFence.slice(firstBrace));
   }
 
-  return withoutFence;
+  const firstBracket = withoutFence.indexOf('[');
+  const lastBracket = withoutFence.lastIndexOf(']');
+
+  if (firstBracket >= 0 && lastBracket > firstBracket) {
+    addCandidate(withoutFence.slice(firstBracket, lastBracket + 1));
+  }
+
+  return Array.from(candidates);
 }
 
-function parseGeneratedCourse(rawResponseText: string): unknown {
-  const parsed = JSON.parse(extractJSONObjectText(rawResponseText)) as unknown;
-
-  if (isRecord(parsed) && isRecord(parsed.course)) {
-    return parsed.course;
+function unwrapGeneratedCourse(value: unknown): unknown {
+  if (isRecord(value) && isRecord(value.course)) {
+    return value.course;
   }
 
-  return parsed;
+  return value;
+}
+
+function looksLikeCourse(value: unknown): boolean {
+  return isRecord(value) && Array.isArray(value.units) && (typeof value.title === 'string' || typeof value.description === 'string');
+}
+
+function findCourseLikeObject(value: unknown, depth = 0): unknown | undefined {
+  if (depth > 8) {
+    return undefined;
+  }
+
+  const unwrapped = unwrapGeneratedCourse(value);
+
+  if (looksLikeCourse(unwrapped)) {
+    return unwrapped;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findCourseLikeObject(item, depth + 1);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+
+  if (isRecord(value)) {
+    for (const childValue of Object.values(value)) {
+      const found = findCourseLikeObject(childValue, depth + 1);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function collectModelTextCandidates(value: unknown, candidates = new Set<string>(), depth = 0): string[] {
+  if (depth > 8) {
+    return Array.from(candidates);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.includes('"units"') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      candidates.add(trimmed);
+    }
+    return Array.from(candidates);
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectModelTextCandidates(item, candidates, depth + 1));
+    return Array.from(candidates);
+  }
+
+  if (isRecord(value)) {
+    Object.values(value).forEach((childValue) => collectModelTextCandidates(childValue, candidates, depth + 1));
+  }
+
+  return Array.from(candidates);
+}
+
+function parseGeneratedCourseFromText(rawResponseText: string, requestId: string): unknown {
+  const candidates = getJSONCandidateTexts(rawResponseText);
+  let lastError: unknown;
+
+  logGenerationStep(requestId, 'openai.output.json_candidates', {
+    candidates: candidates.length,
+    preview: getTextPreview(rawResponseText)
+  });
+
+  for (const [candidateIndex, candidate] of candidates.entries()) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      const unwrapped = unwrapGeneratedCourse(parsed);
+      logGenerationStep(requestId, 'openai.output.json_candidate_parsed', {
+        candidateIndex,
+        repaired: candidate !== rawResponseText.trim()
+      });
+      return unwrapped;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  logGenerationError(requestId, 'openai.output.all_json_candidates_parse', lastError ?? new Error('no_json_candidates'));
+  throw new Error('invalid_model_json');
+}
+
+function parseGeneratedCourse(rawResponseText: string, payload: OpenAIResponsePayload | null, requestId: string): unknown {
+  const structuredCourse = findCourseLikeObject(payload);
+
+  if (structuredCourse) {
+    logGenerationStep(requestId, 'openai.output.structured_course_found');
+    return structuredCourse;
+  }
+
+  const textCandidates = [rawResponseText, ...collectModelTextCandidates(payload)].filter((candidate, index, array) => {
+    return candidate.trim() && array.findIndex((item) => item.trim() === candidate.trim()) === index;
+  });
+
+  if (textCandidates.length === 0) {
+    throw new Error('empty_model_response');
+  }
+
+  for (const [candidateIndex, textCandidate] of textCandidates.entries()) {
+    try {
+      const parsedCourse = parseGeneratedCourseFromText(textCandidate, requestId);
+      logGenerationStep(requestId, 'openai.output.course_json_parsed', { candidateIndex });
+      return parsedCourse;
+    } catch (error) {
+      logGenerationError(requestId, `openai.output.text_candidate_${candidateIndex}`, error);
+    }
+  }
+
+  throw new Error('invalid_model_json');
 }
 
 async function callOpenAI(prompt: string, modelName: string, apiKey: string, requestId: string): Promise<unknown> {
@@ -436,7 +650,7 @@ async function callOpenAI(prompt: string, modelName: string, apiKey: string, req
             strict: false
           }
         },
-        max_output_tokens: 7000,
+        max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,
         store: false
       })
     });
@@ -495,22 +709,28 @@ async function callOpenAI(prompt: string, modelName: string, apiKey: string, req
     throw new Error(payload.error.code === 'rate_limit_exceeded' ? 'rate_limit' : 'openai_error');
   }
 
-  const rawResponseText = payload ? extractResponseText(payload) : '';
-  logGenerationStep(requestId, 'openai.output.extracted', {
-    outputCharacters: rawResponseText.length
+  logGenerationStep(requestId, 'openai.response.status_payload', {
+    status: payload?.status ?? null,
+    incompleteReason: payload?.incomplete_details?.reason ?? null
   });
 
-  if (!rawResponseText) {
-    throw new Error('empty_model_response');
+  if (payload?.status === 'incomplete') {
+    throw new Error('model_output_incomplete');
   }
 
+  const rawResponseText = payload ? extractResponseText(payload) : '';
+  logGenerationStep(requestId, 'openai.output.extracted', {
+    outputCharacters: rawResponseText.length,
+    preview: getTextPreview(rawResponseText)
+  });
+
   try {
-    const parsedCourse = parseGeneratedCourse(rawResponseText);
+    const parsedCourse = parseGeneratedCourse(rawResponseText, payload, requestId);
     logGenerationStep(requestId, 'openai.output.course_json_parsed');
     return parsedCourse;
   } catch (error) {
     logGenerationError(requestId, 'openai.output.course_json_parse', error);
-    throw new Error('invalid_model_json');
+    throw error instanceof Error ? error : new Error('invalid_model_json');
   }
 }
 
@@ -604,22 +824,41 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
       return;
     }
 
+    if (code === 'model_output_incomplete') {
+      sendError(
+        response,
+        502,
+        'model_output_incomplete',
+        'The AI response was cut off before it finished. Try again with shorter source material.',
+        [`Request ID: ${requestId}`, 'Check the server/API console for the exact generation step.'],
+        requestId
+      );
+      return;
+    }
+
     if (code === 'invalid_model_json' || code === 'empty_model_response') {
-      sendError(response, 502, 'invalid_model_response', 'The generated course was not valid. Try again.');
+      sendError(
+        response,
+        502,
+        'invalid_model_response',
+        'The AI returned malformed course JSON. Try again, or use shorter source material.',
+        [`Request ID: ${requestId}`, 'Check the server/API console for the model output preview and JSON parse step.'],
+        requestId
+      );
       return;
     }
 
     if (code === 'openai_timeout') {
-      sendError(response, 504, 'ai_timeout', 'AI generation took too long. Try again with shorter source material.');
+      sendError(response, 504, 'ai_timeout', 'AI generation took too long. Try again with shorter source material.', [`Request ID: ${requestId}`], requestId);
       return;
     }
 
     if (code === 'openai_unavailable' || code === 'network_error') {
-      sendError(response, 503, 'ai_unavailable', 'AI generation is temporarily unavailable.');
+      sendError(response, 503, 'ai_unavailable', 'AI generation is temporarily unavailable.', [`Request ID: ${requestId}`], requestId);
       return;
     }
 
-    sendError(response, 502, 'ai_generation_failed', 'Generation failed. Please try again.');
+    sendError(response, 502, 'ai_generation_failed', 'Generation failed. Please try again.', [`Request ID: ${requestId}`], requestId);
   }
 }
 
