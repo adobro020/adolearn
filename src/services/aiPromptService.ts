@@ -12,12 +12,29 @@ function cleanPromptInput(value: string): string {
   return value.replace(/\r\n/g, '\n').replace(/[\t ]+/g, ' ').trim();
 }
 
+function getCourseScaleGuidance(characterCount: number): string {
+  if (characterCount < 1_500) {
+    return 'Create 1 unit, 1 section, and 2 to 3 short lessons total.';
+  }
+
+  if (characterCount < 8_000) {
+    return 'Create about 1 unit with 1 to 2 sections and 2 to 3 lessons per section.';
+  }
+
+  if (characterCount < 20_000) {
+    return 'Create about 2 units, 1 to 2 sections per unit, and 2 to 3 lessons per section.';
+  }
+
+  return 'Create about 2 to 3 units, 2 sections per unit, and 2 to 3 lessons per section. Do not create more structure than the source material can support.';
+}
+
 export function buildCourseGenerationPrompt(
   sourceMaterial: string,
   options: CourseGenerationPromptOptions
 ): string {
   const cleanedSourceMaterial = cleanPromptInput(sourceMaterial);
   const providedTitle = options.optionalTitle?.trim() || 'Create a concise, learner-friendly course title from the provided source material.';
+  const scaleGuidance = getCourseScaleGuidance(cleanedSourceMaterial.length);
 
   return `You are an expert instructional designer creating an interactive course for AdoLearn.
 
@@ -41,7 +58,8 @@ Hard rules:
 Course title: ${providedTitle}
 
 The source material is ${cleanedSourceMaterial.length.toLocaleString()} characters long.
-Use the source material character count to decide how many units, sections, and lessons to create. Shorter sources should create fewer units, sections, and lessons; longer sources can create more coverage, but every unit, section, and lesson must remain source-grounded and bite-sized.
+Use the source material character count to decide how many units, sections, and lessons to create. ${scaleGuidance}
+Do not create empty units, empty sections, or placeholder lessons. Every unit must contain at least one complete section, every section must contain at least one complete lesson, and every lesson must contain at least one complete exercise.
 Make the exercises per lesson based off how long the source material is.
 
 Exercise requirements:

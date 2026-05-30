@@ -41,6 +41,21 @@ const DEFAULT_MODEL = 'gpt-5.4-mini';
 const ALLOWED_MODELS = new Set(['gpt-5.4-mini', 'gpt-5-mini', 'gpt-5']);
 const MAX_REQUEST_BYTES = 700_000;
 const MAX_SOURCE_MATERIAL_CHARACTERS = 50_000;
+const OPENAI_REQUEST_TIMEOUT_MS = 55_000;
+
+function createGenerationRequestId(): string {
+  return `adolearn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function logGenerationStep(requestId: string, step: string, details?: Record<string, unknown>): void {
+  const safeDetails = details ? ` ${JSON.stringify(details)}` : '';
+  console.log(`[AdoLearn generation][${requestId}] ${step}${safeDetails}`);
+}
+
+function logGenerationError(requestId: string, step: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[AdoLearn generation][${requestId}] ${step} failed`, { message });
+}
 const COURSE_SCHEMA = {
   type: 'object',
   additionalProperties: true,
@@ -254,6 +269,22 @@ function getCourseSchemaForPrompt(): string {
   return JSON.stringify(COURSE_SCHEMA, null, 2);
 }
 
+function getCourseScaleGuidance(characterCount: number): string {
+  if (characterCount < 1_500) {
+    return 'Create 1 unit, 1 section, and 2 to 3 short lessons total.';
+  }
+
+  if (characterCount < 8_000) {
+    return 'Create about 1 unit with 1 to 2 sections and 2 to 3 lessons per section.';
+  }
+
+  if (characterCount < 20_000) {
+    return 'Create about 2 units, 1 to 2 sections per unit, and 2 to 3 lessons per section.';
+  }
+
+  return 'Create about 2 to 3 units, 2 sections per unit, and 2 to 3 lessons per section. Do not create more structure than the source material can support.';
+}
+
 function buildCourseGenerationPrompt(
   sourceMaterial: string,
   options: {
@@ -261,6 +292,7 @@ function buildCourseGenerationPrompt(
   }
 ): string {
   const providedTitle = options.optionalTitle?.trim() || 'Create a concise, learner-friendly course title from the provided source material.';
+  const scaleGuidance = getCourseScaleGuidance(sourceMaterial.length);
 
   return `You are an expert instructional designer creating an interactive course for AdoLearn.
 
@@ -284,7 +316,8 @@ Hard rules:
 Course title: ${providedTitle}
 
 The source material is ${sourceMaterial.length.toLocaleString()} characters long.
-Use the source material character count to decide how many units, sections, and lessons to create. Shorter sources should create fewer units, sections, and lessons; longer sources can create more coverage, but every unit, section, and lesson must remain source-grounded and bite-sized.
+Use the source material character count to decide how many units, sections, and lessons to create. ${scaleGuidance}
+Do not create empty units, empty sections, or placeholder lessons. Every unit must contain at least one complete section, every section must contain at least one complete lesson, and every lesson must contain at least one complete exercise.
 Make the exercises per lesson based off how long the source material is.
 
 Exercise requirements:
@@ -354,12 +387,21 @@ function parseGeneratedCourse(rawResponseText: string): unknown {
   return parsed;
 }
 
-async function callOpenAI(prompt: string, modelName: string, apiKey: string): Promise<unknown> {
+async function callOpenAI(prompt: string, modelName: string, apiKey: string, requestId: string): Promise<unknown> {
   let openAIResponse: Response;
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENAI_REQUEST_TIMEOUT_MS);
+
+  logGenerationStep(requestId, 'openai.request.start', {
+    model: modelName,
+    promptCharacters: prompt.length
+  });
 
   try {
     openAIResponse = await fetch(OPENAI_RESPONSES_API_URL, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
@@ -394,18 +436,41 @@ async function callOpenAI(prompt: string, modelName: string, apiKey: string): Pr
             strict: false
           }
         },
+        max_output_tokens: 7000,
         store: false
       })
     });
-  } catch {
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      logGenerationError(requestId, 'openai.request.timeout', error);
+      throw new Error('openai_timeout');
+    }
+
+    logGenerationError(requestId, 'openai.request.network', error);
     throw new Error('network_error');
+  } finally {
+    clearTimeout(timeoutId);
   }
+
+  logGenerationStep(requestId, 'openai.response.received', {
+    status: openAIResponse.status,
+    ok: openAIResponse.ok,
+    durationMs: Date.now() - startedAt
+  });
+
+  const responseText = await openAIResponse.text();
+  logGenerationStep(requestId, 'openai.response.body_read', {
+    bodyCharacters: responseText.length
+  });
 
   let payload: OpenAIResponsePayload | null = null;
 
   try {
-    payload = (await openAIResponse.json()) as OpenAIResponsePayload;
-  } catch {
+    payload = responseText ? (JSON.parse(responseText) as OpenAIResponsePayload) : null;
+    logGenerationStep(requestId, 'openai.response.json_parsed');
+  } catch (error) {
+    logGenerationError(requestId, 'openai.response.json_parse', error);
     payload = null;
   }
 
@@ -413,28 +478,48 @@ async function callOpenAI(prompt: string, modelName: string, apiKey: string): Pr
     const rateLimited = openAIResponse.status === 429 || payload?.error?.code === 'rate_limit_exceeded';
     const unavailable = openAIResponse.status >= 500;
 
+    logGenerationStep(requestId, 'openai.response.not_ok', {
+      status: openAIResponse.status,
+      code: payload?.error?.code,
+      type: payload?.error?.type
+    });
+
     throw new Error(rateLimited ? 'rate_limit' : unavailable ? 'openai_unavailable' : 'openai_error');
   }
 
   if (payload?.error) {
+    logGenerationStep(requestId, 'openai.response.error_payload', {
+      code: payload.error.code,
+      type: payload.error.type
+    });
     throw new Error(payload.error.code === 'rate_limit_exceeded' ? 'rate_limit' : 'openai_error');
   }
 
   const rawResponseText = payload ? extractResponseText(payload) : '';
+  logGenerationStep(requestId, 'openai.output.extracted', {
+    outputCharacters: rawResponseText.length
+  });
 
   if (!rawResponseText) {
     throw new Error('empty_model_response');
   }
 
   try {
-    return parseGeneratedCourse(rawResponseText);
-  } catch {
+    const parsedCourse = parseGeneratedCourse(rawResponseText);
+    logGenerationStep(requestId, 'openai.output.course_json_parsed');
+    return parsedCourse;
+  } catch (error) {
+    logGenerationError(requestId, 'openai.output.course_json_parse', error);
     throw new Error('invalid_model_json');
   }
 }
 
 async function handleGenerateCourse(request: ApiRequest, response: ApiResponse): Promise<void> {
+  const requestId = createGenerationRequestId();
+  logGenerationStep(requestId, 'request.received', { method: request.method ?? 'unknown' });
+
   if (request.method !== 'POST') {
+    logGenerationStep(requestId, 'request.rejected.method');
     sendError(response, 405, 'method_not_allowed', 'This endpoint only accepts POST requests.');
     return;
   }
@@ -442,6 +527,7 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
+    logGenerationStep(requestId, 'request.rejected.missing_api_key');
     sendError(response, 503, 'server_configuration_missing', 'Server configuration is missing.');
     return;
   }
@@ -449,8 +535,11 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
   let body: unknown;
 
   try {
+    logGenerationStep(requestId, 'request.body.read.start');
     body = await readRequestBody(request);
+    logGenerationStep(requestId, 'request.body.read.done', { bytes: getRequestByteSize(body) });
   } catch (error) {
+    logGenerationError(requestId, 'request.body.read', error);
     const message = error instanceof Error ? error.message : '';
 
     if (message === 'request_too_large') {
@@ -463,36 +552,51 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
   }
 
   if (!isRecord(body)) {
+    logGenerationStep(requestId, 'request.rejected.invalid_body');
     sendError(response, 400, 'invalid_request', 'Generation failed. Please try again.');
     return;
   }
 
   if (getRequestByteSize(body) > MAX_REQUEST_BYTES) {
+    logGenerationStep(requestId, 'request.rejected.too_large', { bytes: getRequestByteSize(body) });
     sendError(response, 422, 'request_too_large', 'The source material must be 50,000 characters or fewer.');
     return;
   }
 
   const requestBody = body as GenerateCourseRequestBody;
   const sourceMaterial = getCleanString(requestBody.sourceMaterial);
+  const modelName = getAllowedModel(requestBody.modelName);
+
+  logGenerationStep(requestId, 'request.body.normalized', {
+    sourceCharacters: sourceMaterial.length,
+    requestedModel: getCleanString(requestBody.modelName) || null,
+    modelName
+  });
 
   if (!sourceMaterial) {
+    logGenerationStep(requestId, 'request.rejected.missing_source');
     sendError(response, 400, 'missing_source_material', 'Generation failed. Please try again.');
     return;
   }
 
   if (sourceMaterial.length > MAX_SOURCE_MATERIAL_CHARACTERS) {
+    logGenerationStep(requestId, 'request.rejected.source_too_large', { sourceCharacters: sourceMaterial.length });
     sendError(response, 422, 'source_too_large', 'The source material must be 50,000 characters or fewer.');
     return;
   }
 
+  logGenerationStep(requestId, 'prompt.build.start');
   const prompt = buildCourseGenerationPrompt(sourceMaterial, {
     optionalTitle: getOptionalCleanString(requestBody.optionalTitle)
   });
+  logGenerationStep(requestId, 'prompt.build.done', { promptCharacters: prompt.length });
 
   try {
-    const course = await callOpenAI(prompt, getAllowedModel(requestBody.modelName), apiKey);
-    sendJSON(response, 200, { ok: true, course });
+    const course = await callOpenAI(prompt, modelName, apiKey, requestId);
+    logGenerationStep(requestId, 'response.success.send');
+    sendJSON(response, 200, { ok: true, course, requestId });
   } catch (error) {
+    logGenerationError(requestId, 'generation', error);
     const code = error instanceof Error ? error.message : 'unknown_error';
 
     if (code === 'rate_limit') {
@@ -502,6 +606,11 @@ async function handleGenerateCourse(request: ApiRequest, response: ApiResponse):
 
     if (code === 'invalid_model_json' || code === 'empty_model_response') {
       sendError(response, 502, 'invalid_model_response', 'The generated course was not valid. Try again.');
+      return;
+    }
+
+    if (code === 'openai_timeout') {
+      sendError(response, 504, 'ai_timeout', 'AI generation took too long. Try again with shorter source material.');
       return;
     }
 

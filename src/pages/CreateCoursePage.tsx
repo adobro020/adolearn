@@ -397,6 +397,8 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   }
 
   async function advanceToStep(index: number, duration = 450) {
+    const step = GENERATION_STEPS[getVisibleStepIndex(index)];
+    console.log('[AdoLearn generation][ui] step', { index, label: step?.label ?? null });
     setActiveStepIndex(index);
     setGenerationProgress((currentProgress) =>
       Math.max(currentProgress, GENERATION_PROGRESS_MILESTONES[getVisibleStepIndex(index)] ?? currentProgress)
@@ -439,6 +441,12 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       return;
     }
 
+    console.log('[AdoLearn generation][ui] submit', {
+      sourceCharacters: trimmedSourceMaterial.length,
+      hasUploadedFiles,
+      hasTitle: Boolean(courseTitle.trim())
+    });
+
     resetMessages();
     setActiveStepIndex(0);
     setGenerationProgress(5);
@@ -446,6 +454,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
     try {
       const currentSettings = getSettings();
+      console.log('[AdoLearn generation][ui] settings loaded', { modelName: currentSettings.modelName });
       let generatedCourse: Course | null = null;
 
       await sleep(120);
@@ -454,6 +463,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       await advanceToStep(3, 320);
       setActiveStepIndex(4);
       generatedCourse = await generateCourseForCurrentMode(currentSettings);
+      console.log('[AdoLearn generation][ui] course received', { courseId: generatedCourse.id, title: generatedCourse.title });
       await advanceToStep(5, 320);
       await advanceToStep(6, 240);
 
@@ -461,7 +471,9 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
         throw new Error('This browser is blocking browser storage, so AdoLearn cannot save the generated course locally.');
       }
 
+      console.log('[AdoLearn generation][ui] local save start');
       const didSaveCourse = saveCourse(generatedCourse);
+      console.log('[AdoLearn generation][ui] local save result', { didSaveCourse });
 
       if (!didSaveCourse) {
         throw new Error(
@@ -479,6 +491,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       await sleep(650);
       onCourseCreated(generatedCourse.id);
     } catch (generationError) {
+      console.error('[AdoLearn generation][ui] failed', generationError);
       const message = formatGenerationError(generationError);
       setError(message);
       setActiveStepIndex((currentStepIndex) => (currentStepIndex < 0 ? 0 : currentStepIndex));

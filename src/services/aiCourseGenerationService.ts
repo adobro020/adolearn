@@ -5,6 +5,7 @@ import { validateCourse } from './courseValidator';
 export type AICourseGenerationErrorCode =
   | 'network_error'
   | 'api_error'
+  | 'api_timeout'
   | 'rate_limit'
   | 'server_configuration_missing'
   | 'source_too_large'
@@ -51,6 +52,16 @@ interface GenerateCourseAPISuccessPayload {
 const GENERATE_COURSE_API_URL = '/api/generate-course';
 const MAX_VALIDATION_ERRORS_IN_MESSAGE = 8;
 const MAX_PROXY_SOURCE_MATERIAL_CHARS = 50_000;
+
+function logClientGenerationStep(step: string, details?: Record<string, unknown>): void {
+  const safeDetails = details ? ` ${JSON.stringify(details)}` : '';
+  console.log(`[AdoLearn generation][client] ${step}${safeDetails}`);
+}
+
+function logClientGenerationError(step: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[AdoLearn generation][client] ${step} failed`, { message });
+}
 function getSourcePreview(sourceMaterial: string): string {
   return sourceMaterial.replace(/\s+/g, ' ').trim().slice(0, 500);
 }
@@ -108,6 +119,14 @@ function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | 
     );
   }
 
+  if (status === 504 || code === 'ai_timeout') {
+    return new AICourseGenerationError(
+      'api_timeout',
+      payload?.error || 'AI generation took too long. Try again with shorter source material.',
+      details
+    );
+  }
+
   if (status >= 500) {
     return new AICourseGenerationError(
       'api_error',
@@ -123,10 +142,27 @@ function mapProxyError(status: number, payload: GenerateCourseAPIErrorPayload | 
   );
 }
 
-async function readResponseJSON(response: Response): Promise<unknown> {
+async function readResponsePayload(response: Response): Promise<{ payload: unknown; rawText: string }> {
+  const rawText = await response.text();
+  logClientGenerationStep('api.response.body_read', {
+    status: response.status,
+    ok: response.ok,
+    bodyCharacters: rawText.length
+  });
+
+  if (!rawText.trim()) {
+    return { payload: null, rawText };
+  }
+
   try {
-    return (await response.json()) as unknown;
-  } catch {
+    return { payload: JSON.parse(rawText) as unknown, rawText };
+  } catch (error) {
+    logClientGenerationError('api.response.json_parse', error);
+
+    if (!response.ok) {
+      return { payload: null, rawText };
+    }
+
     throw new AICourseGenerationError(
       'invalid_json',
       'The generated course was not valid. Try again.'
@@ -155,6 +191,13 @@ async function callServerProxy(
   preparedSourceMaterial: string
 ): Promise<GenerateCourseAPISuccessPayload> {
   let response: Response;
+  const startedAt = Date.now();
+
+  logClientGenerationStep('api.request.start', {
+    url: GENERATE_COURSE_API_URL,
+    sourceCharacters: preparedSourceMaterial.length,
+    modelName: cleanModelName(input.modelName) ?? null
+  });
 
   try {
     response = await fetch(GENERATE_COURSE_API_URL, {
@@ -168,16 +211,27 @@ async function callServerProxy(
         modelName: cleanModelName(input.modelName)
       })
     });
-  } catch {
+  } catch (error) {
+    logClientGenerationError('api.request.network', error);
     throw new AICourseGenerationError(
       'network_error',
       'Generation failed. Please try again.'
     );
   }
 
-  const payload = await readResponseJSON(response);
+  logClientGenerationStep('api.response.received', {
+    status: response.status,
+    ok: response.ok,
+    durationMs: Date.now() - startedAt
+  });
+
+  const { payload } = await readResponsePayload(response);
 
   if (!response.ok) {
+    logClientGenerationStep('api.response.not_ok', {
+      status: response.status,
+      code: isRecord(payload) ? payload.code ?? null : null
+    });
     throw mapProxyError(
       response.status,
       isRecord(payload) ? (payload as GenerateCourseAPIErrorPayload) : null
@@ -192,7 +246,18 @@ export async function generateCourseWithAI({
   optionalTitle,
   modelName
 }: GenerateCourseWithAIInput): Promise<GenerateCourseWithAIResult> {
+  logClientGenerationStep('start', {
+    sourceCharacters: sourceMaterial.length,
+    hasOptionalTitle: Boolean(optionalTitle?.trim()),
+    modelName: cleanModelName(modelName) ?? null
+  });
+
   const preparedSource = prepareSourceMaterialForProxy(sourceMaterial);
+  logClientGenerationStep('source.prepared', {
+    sourceCharacters: preparedSource.sourceMaterial.length,
+    wasCondensed: preparedSource.wasCondensed
+  });
+
   const payload = await callServerProxy(
     {
       sourceMaterial,
@@ -201,6 +266,12 @@ export async function generateCourseWithAI({
     },
     preparedSource.sourceMaterial
   );
+
+  logClientGenerationStep('api.payload.received', {
+    hasCourse: Boolean(payload.course),
+    hasRawCourse: Boolean(payload.rawCourse),
+    warnings: payload.validationWarnings?.length ?? 0
+  });
 
   const rawCourse = extractCoursePayload(payload);
 
@@ -211,13 +282,31 @@ export async function generateCourseWithAI({
     );
   }
 
+  logClientGenerationStep('validation.draft.start');
   const draftValidation = validateCourse(rawCourse, { allowNormalizerRepair: true });
+  logClientGenerationStep('validation.draft.done', {
+    isValid: draftValidation.isValid,
+    errors: draftValidation.errors.length,
+    warnings: draftValidation.warnings.length
+  });
 
+  logClientGenerationStep('normalize.start');
   const normalizedCourse = normalizeCourseFromAIJSON(rawCourse, {
     fallbackTitle: optionalTitle?.trim() || 'Generated Learning Path',
     sourceMaterialPreview: getSourcePreview(sourceMaterial)
   });
+  logClientGenerationStep('normalize.done', {
+    courseId: normalizedCourse.id,
+    units: normalizedCourse.units.length
+  });
+
+  logClientGenerationStep('validation.normalized.start');
   const normalizedValidation = validateCourse(normalizedCourse);
+  logClientGenerationStep('validation.normalized.done', {
+    isValid: normalizedValidation.isValid,
+    errors: normalizedValidation.errors.length,
+    warnings: normalizedValidation.warnings.length
+  });
 
   if (!normalizedValidation.isValid) {
     throw new AICourseGenerationError(
@@ -226,6 +315,11 @@ export async function generateCourseWithAI({
       normalizedValidation.errors.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
     );
   }
+
+  logClientGenerationStep('done', {
+    courseId: normalizedCourse.id,
+    title: normalizedCourse.title
+  });
 
   return {
     course: normalizedCourse,
