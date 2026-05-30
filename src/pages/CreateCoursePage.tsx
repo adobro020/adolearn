@@ -161,6 +161,10 @@ function getSourceLimitErrorMessage(): string {
   return 'Learning material must be 50,000 characters or fewer.';
 }
 
+function showSourceLimitPopup(extraDetail?: string) {
+  window.alert(extraDetail ? `${getSourceLimitErrorMessage()} ${extraDetail}` : getSourceLimitErrorMessage());
+}
+
 function getTextAfterPaste(currentValue: string, pastedValue: string, selectionStart: number, selectionEnd: number): string {
   return `${currentValue.slice(0, selectionStart)}${pastedValue}${currentValue.slice(selectionEnd)}`;
 }
@@ -247,9 +251,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
   function handleSourceMaterialChange(value: string) {
     if (value.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
       setSourceMaterial(getLimitedSourceMaterial(value));
-      setError(getSourceLimitErrorMessage());
-      setSuccessMessage(null);
-      setLastWarning(null);
+      showSourceLimitPopup();
       return;
     }
 
@@ -274,10 +276,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     }
 
     event.preventDefault();
-    setSourceMaterial(getLimitedSourceMaterial(nextValue));
-    setError(getSourceLimitErrorMessage());
-    setSuccessMessage(null);
-    setLastWarning(null);
+    showSourceLimitPopup('Paste a shorter section of text.');
   }
 
   async function handleSourceFiles(files: FileList | File[]) {
@@ -334,24 +333,25 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
       setLastWarning(null);
     }
 
+    if (characterLimitSkippedNames.length > 0) {
+      showSourceLimitPopup(`These TXT files were not added: ${characterLimitSkippedNames.join(', ')}.`);
+    }
+
     if (acceptedBlocks.length === 0) {
-      setError(
-        characterLimitSkippedNames.length > 0
-          ? `TXT files must be 50,000 characters or fewer. Shorten the file and upload again: ${characterLimitSkippedNames.join(', ')}.`
-          : 'No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.'
-      );
+      if (characterLimitSkippedNames.length === 0) {
+        setError('No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.');
+      }
       setIsReadingSourceFiles(false);
       return;
     }
 
-    if (characterLimitSkippedNames.length > 0) {
-      setError(`TXT files must be 50,000 characters or fewer. These files were not added: ${characterLimitSkippedNames.join(', ')}.`);
-    }
-
     if (skippedNames.length > characterLimitSkippedNames.length) {
-      setLastWarning(
-        `Some files were skipped because they were unsupported, oversized, empty, or over the 50,000-character limit: ${skippedNames.join(', ')}.`
-      );
+      const nonLimitSkippedNames = skippedNames.filter((name) => !characterLimitSkippedNames.includes(name));
+      if (nonLimitSkippedNames.length > 0) {
+        setLastWarning(
+          `Some files were skipped because they were unsupported, oversized, or empty: ${nonLimitSkippedNames.join(', ')}.`
+        );
+      }
     }
 
     setIsReadingSourceFiles(false);
