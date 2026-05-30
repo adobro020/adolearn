@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type ClipboardEvent, type DragEvent } from 'react';
 import { PageCard } from '../components/PageCard';
 import { NoticeBanner, ProgressBar } from '../components/Polish';
 import { DEMO_SOURCE_MATERIAL } from '../data/mockCourse';
@@ -87,7 +87,7 @@ function FullScreenGenerationOverlay({
     >
       <div className="relative w-full max-w-3xl overflow-hidden rounded-[2.5rem] bg-white p-6 text-center shadow-2xl shadow-slate-950/25 ring-1 ring-white/70 dark:bg-slate-950 dark:ring-zinc-800 sm:p-10">
         <div className="absolute -left-14 top-10 h-40 w-40 rounded-full bg-emerald-200/60 blur-3xl" aria-hidden="true" />
-        <div className="absolute -right-8 bottom-0 h-56 w-56 rounded-full bg-sky-200/60 blur-3xl" aria-hidden="true" />
+        <div className="absolute -right-8 bottom-0 h-56 w-56 rounded-full bg-emerald-100/70 blur-3xl" aria-hidden="true" />
 
         <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-6">
           <img
@@ -111,7 +111,7 @@ function FullScreenGenerationOverlay({
               role="progressbar"
             >
               <div className="absolute inset-0 rounded-full border-4 border-emerald-100/80 dark:border-emerald-400/15" aria-hidden="true" />
-              <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-r-sky-400 border-t-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.22)]" aria-hidden="true" />
+              <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-r-emerald-300 border-t-emerald-600 shadow-[0_0_35px_rgba(16,185,129,0.25)]" aria-hidden="true" />
               <div className="absolute inset-3 animate-pulse rounded-full bg-emerald-50 shadow-inner dark:bg-emerald-400/10" aria-hidden="true" />
             </div>
           )}
@@ -155,6 +155,14 @@ function isSupportedTxtFile(file: File): boolean {
 
 function getLimitedSourceMaterial(value: string): string {
   return value.slice(0, SOURCE_MATERIAL_CHARACTER_LIMIT);
+}
+
+function getSourceLimitErrorMessage(): string {
+  return 'Learning material must be 50,000 characters or fewer.';
+}
+
+function getTextAfterPaste(currentValue: string, pastedValue: string, selectionStart: number, selectionEnd: number): string {
+  return `${currentValue.slice(0, selectionStart)}${pastedValue}${currentValue.slice(selectionEnd)}`;
 }
 
 function readFileAsText(file: File): Promise<string> {
@@ -236,6 +244,42 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     setGenerationProgress(0);
   }
 
+  function handleSourceMaterialChange(value: string) {
+    if (value.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
+      setSourceMaterial(getLimitedSourceMaterial(value));
+      setError(getSourceLimitErrorMessage());
+      setSuccessMessage(null);
+      setLastWarning(null);
+      return;
+    }
+
+    setSourceMaterial(value);
+    if (error || successMessage || lastWarning) {
+      resetMessages();
+    }
+  }
+
+  function handleSourceMaterialPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    const pastedText = event.clipboardData.getData('text');
+    const target = event.currentTarget;
+    const nextValue = getTextAfterPaste(
+      sourceMaterial,
+      pastedText,
+      target.selectionStart,
+      target.selectionEnd
+    );
+
+    if (nextValue.length <= SOURCE_MATERIAL_CHARACTER_LIMIT) {
+      return;
+    }
+
+    event.preventDefault();
+    setSourceMaterial(getLimitedSourceMaterial(nextValue));
+    setError(getSourceLimitErrorMessage());
+    setSuccessMessage(null);
+    setLastWarning(null);
+  }
+
   async function handleSourceFiles(files: FileList | File[]) {
     const selectedFiles = Array.from(files).slice(0, MAX_UPLOAD_FILES_PER_BATCH);
 
@@ -246,6 +290,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     const acceptedBlocks: string[] = [];
     const acceptedNames: string[] = [];
     const skippedNames: string[] = [];
+    const characterLimitSkippedNames: string[] = [];
     setIsReadingSourceFiles(true);
     setError(null);
     setSuccessMessage(null);
@@ -268,8 +313,9 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
 
         const nextSourceMaterial = [...acceptedBlocks, cleanedFileText].join('\n\n');
 
-        if (cleanedFileText.length > SOURCE_MATERIAL_CHARACTER_LIMIT || nextSourceMaterial.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
+        if (fileText.length > SOURCE_MATERIAL_CHARACTER_LIMIT || nextSourceMaterial.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
           skippedNames.push(file.name);
+          characterLimitSkippedNames.push(file.name);
           continue;
         }
 
@@ -289,12 +335,20 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     }
 
     if (acceptedBlocks.length === 0) {
-      setError('No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.');
+      setError(
+        characterLimitSkippedNames.length > 0
+          ? `TXT files must be 50,000 characters or fewer. Shorten the file and upload again: ${characterLimitSkippedNames.join(', ')}.`
+          : 'No readable course material was added. Upload a TXT file with 50,000 characters or fewer, or paste the material into the text box.'
+      );
       setIsReadingSourceFiles(false);
       return;
     }
 
-    if (skippedNames.length > 0) {
+    if (characterLimitSkippedNames.length > 0) {
+      setError(`TXT files must be 50,000 characters or fewer. These files were not added: ${characterLimitSkippedNames.join(', ')}.`);
+    }
+
+    if (skippedNames.length > characterLimitSkippedNames.length) {
       setLastWarning(
         `Some files were skipped because they were unsupported, oversized, empty, or over the 50,000-character limit: ${skippedNames.join(', ')}.`
       );
@@ -378,7 +432,7 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
     }
 
     if (sourceMaterial.length > SOURCE_MATERIAL_CHARACTER_LIMIT) {
-      setError('Learning material must be 50,000 characters or fewer.');
+      setError(getSourceLimitErrorMessage());
       setSuccessMessage(null);
       setLastWarning(null);
       setActiveStepIndex(-1);
@@ -566,12 +620,8 @@ export function CreateCoursePage({ onCourseCreated }: CreateCoursePageProps) {
                     <textarea
                       id="source-material"
                       value={sourceMaterial}
-                      onChange={(event) => {
-                        setSourceMaterial(getLimitedSourceMaterial(event.target.value));
-                        if (error || successMessage || lastWarning) {
-                          resetMessages();
-                        }
-                      }}
+                      onChange={(event) => handleSourceMaterialChange(event.target.value)}
+                      onPaste={handleSourceMaterialPaste}
                       disabled={isGenerating}
                       maxLength={SOURCE_MATERIAL_CHARACTER_LIMIT}
                       className="mt-2 min-h-72 w-full resize-y rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"

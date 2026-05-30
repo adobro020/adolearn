@@ -111,6 +111,12 @@ function reviewPath(courseId?: string | null): string {
   return courseId ? `/review/${encodeURIComponent(courseId)}` : '/review';
 }
 
+function scrollToPageTop() {
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  });
+}
+
 function navPath(pageId: PageId): string {
   if (pageId === 'create') {
     return '/create';
@@ -146,6 +152,7 @@ export default function App() {
     }
 
     applyRoute(parseRoute(path));
+    scrollToPageTop();
   }
 
   useEffect(() => {

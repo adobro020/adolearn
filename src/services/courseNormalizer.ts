@@ -352,18 +352,23 @@ function normalizeSection(value: unknown, index: number, seenIds: Set<string>): 
 function normalizeUnit(value: unknown, index: number, seenIds: Set<string>): Unit {
   const record = isRecord(value) ? value : {};
   const sectionsSource = Array.isArray(record.sections) ? record.sections : [];
+  const sections = sectionsSource
+    .map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds))
+    .filter((section) => section.lessons.length > 0);
 
   return {
     id: ensureUniqueId(record.id, 'unit', seenIds),
     title: trimText(record.title, `Unit ${index + 1}`, MAX_TITLE_LENGTH),
     description: trimText(record.description, 'A course unit built from the provided source material.', MAX_DESCRIPTION_LENGTH),
-    sections: sectionsSource.map((section, sectionIndex) => normalizeSection(section, sectionIndex, seenIds))
+    sections
   };
 }
 
 function getCourseUnitsSource(record: Record<string, unknown>, seenIds: Set<string>): Unit[] {
   if (Array.isArray(record.units)) {
-    return record.units.map((unit, unitIndex) => normalizeUnit(unit, unitIndex, seenIds));
+    return record.units
+      .map((unit, unitIndex) => normalizeUnit(unit, unitIndex, seenIds))
+      .filter((unit) => unit.sections.length > 0);
   }
 
   return [];

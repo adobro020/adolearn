@@ -213,14 +213,6 @@ export async function generateCourseWithAI({
 
   const draftValidation = validateCourse(rawCourse, { allowNormalizerRepair: true });
 
-  if (!draftValidation.isValid) {
-    throw new AICourseGenerationError(
-      'invalid_schema',
-      'The generated course was not valid. Try again.',
-      draftValidation.errors.slice(0, MAX_VALIDATION_ERRORS_IN_MESSAGE)
-    );
-  }
-
   const normalizedCourse = normalizeCourseFromAIJSON(rawCourse, {
     fallbackTitle: optionalTitle?.trim() || 'Generated Learning Path',
     sourceMaterialPreview: getSourcePreview(sourceMaterial)
